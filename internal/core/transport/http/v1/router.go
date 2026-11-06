@@ -5,4 +5,9 @@ import (
 	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
 )
 
-func NewRoutes(apiV1Group chi.Router, l logger.Interface) {}
+func NewRoutes(apiV1Group chi.Router, l logger.Interface) {
+	//r := &V1{
+	//	l: l,
+	//	v: validator.New(validator.WithRequiredStructEnabled()),
+	//}
+}

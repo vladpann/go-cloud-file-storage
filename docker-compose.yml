@@ -17,6 +17,11 @@ x-backend-app-environment: &x-backend-app-environment
   # PG
   PG_POOL_MAX: ${PG_POOL_MAX}
   PG_URL: ${PG_URL}
+  # Tracing
+  TRACING_ENABLED: ${TRACING_ENABLED}
+  TRACING_OTLP_ENDPOINT: ${TRACING_OTLP_ENDPOINT}
+  TRACING_OTLP_INSECURE: ${TRACING_OTLP_INSECURE}
+  TRACING_SAMPLE_RATE: ${TRACING_SAMPLE_RATE}
 
 services:
   db:
@@ -33,6 +38,18 @@ services:
         aliases:
           - db.lvh.me
 
+  jaeger:
+    container_name: jaeger
+    image: jaegertracing/all-in-one:1.76.0
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4318:4318"     # OTLP HTTP
+      - "6831:6831/udp" # Jaeger agent UDP
+    networks:
+      app_network:
+        aliases:
+          - jaeger.lvh.me
+
   app:
     container_name: app
     platform: linux/amd64
@@ -46,6 +63,7 @@ services:
       - "8081:8081"
     depends_on:
       - db
+      - jaeger
     deploy:
       resources:
         limits:

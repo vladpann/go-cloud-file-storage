@@ -7,6 +7,8 @@ include .env.example
 export
 endif
 
+export PROJECT_ROOT=$(shell pwd)
+
 BASE_STACK = docker compose -f docker-compose.yml
 
 # HELP =================================================================================================================
@@ -17,71 +19,76 @@ help: ## Display this help screen
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 compose-up: ### Run docker compose (without backend and reverse proxy)
-	$(BASE_STACK) up --build -d db && docker compose logs -f
+	@$(BASE_STACK) up --build -d db jaeger
+	@$(BASE_STACK) logs -f
 .PHONY: compose-up
 
 compose-up-all: ### Run docker compose (with backend and reverse proxy)
-	$(BASE_STACK) up --build -d
+	@$(BASE_STACK) up --build -d
 .PHONY: compose-up-all
 
 compose-down: ### Down docker compose
-	$(BASE_STACK) down --remove-orphans
+	@$(BASE_STACK) down --remove-orphans
 .PHONY: compose-down
 
 deps: ### deps tidy + verify
-	go mod tidy && go mod verify
+	@go mod tidy && go mod verify
 .PHONY: deps
 
 deps-audit: ### check dependencies vulnerabilities
-	govulncheck ./...
+	@govulncheck ./...
 .PHONY: deps-audit
 
 fix-diff: ### Show code changes by `go fix`
-	go fix -diff ./...
+	@go fix -diff ./...
 .PHONY: fix-diff
 
 format: ### Run code formatter
-	go fix ./...
-	gofumpt -l -w .
-	gci write . --skip-generated -s standard -s default
+	@go fix ./...
+	@gofumpt -l -w .
+	@gci write . --skip-generated -s standard -s default
 .PHONY: format
 
 run: deps
-	go mod download && \
+	@go mod download && \
 	CGO_ENABLED=0 go run -tags migrate ./cmd/app
 .PHONY: run
 
+ps: ### Show status containers
+	@docker compose ps
+.PHONY: ps
+
 docker-rm-volume: ### remove docker volume
-	docker volume rm go-clean-template_pg-data
+	@docker volume rm ${PROJECT_ROOT}_pg-data
 .PHONY: docker-rm-volume
 
 linter-golangci: ### check by golangci linter
-	golangci-lint run
+	@golangci-lint run
 .PHONY: linter-golangci
 
 linter-hadolint: ### check by hadolint linter
-	git ls-files --exclude='Dockerfile*' --ignored | xargs hadolint
+	@git ls-files --exclude='Dockerfile*' --ignored | xargs hadolint
 .PHONY: linter-hadolint
 
 linter-dotenv: ### check by dotenv linter
-	dotenv-linter
+	@dotenv-linter
 .PHONY: linter-dotenv
 
 test: ### run test
-	go test -v -race -covermode atomic -coverprofile=coverage.txt ./internal/... ./pkg/...
+	@go test -v -race -covermode atomic -coverprofile=coverage.txt ./internal/... ./pkg/...
 .PHONY: test
 
 migrate-create:  ### create new migration
-	migrate create -ext sql -dir migrations '$(word 2,$(MAKECMDGOALS))'
+	@migrate create -ext sql -dir migrations '$(word 2,$(MAKECMDGOALS))'
 .PHONY: migrate-create
 
 migrate-up: ### migration up
-	migrate -path migrations -database '$(PG_URL)?sslmode=disable' up
+	@migrate -path migrations -database '$(PG_URL)?sslmode=disable' up
 .PHONY: migrate-up
 
 bin-deps: ### install tools
-	go install tool
-	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate
+	@go install tool
+	@go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate
 .PHONY: bin-deps
 
 pre-commit: deps format linter-golangci test ### run pre-commit
