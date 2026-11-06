@@ -8,10 +8,11 @@ import (
 
 type (
 	Config struct {
-		App  app
-		HTTP http
-		Log  log
-		PG   pg
+		App     app
+		HTTP    http
+		Log     log
+		PG      pg
+		Tracing tracing
 	}
 
 	app struct {
@@ -30,6 +31,13 @@ type (
 	pg struct {
 		PoolMax int    `env:"PG_POOL_MAX,required"`
 		URL     string `env:"PG_URL,required"`
+	}
+
+	tracing struct {
+		Enabled      bool    `env:"TRACING_ENABLED" envDefault:"false"`
+		OTLPEndpoint string  `env:"TRACING_OTLP_ENDPOINT" evnDefault:"localhost:4317"`
+		OTLPInsecure bool    `env:"TRACING_OTLP_INSECURE" envDefault:"true"`
+		SampleRate   float64 `env:"TRACING_SAMPLE_RATE" envDefault:"0.1"`
 	}
 )
 
