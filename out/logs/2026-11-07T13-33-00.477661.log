@@ -1,0 +1,3 @@
+{"level":"info","time":"2026-11-07T16:33:00+03:00","caller":"/Users/vladislav/Desktop/GitHub/go-cloud-file-storage/internal/app/app.go:38","message":"httpserver - Server - Started"}
+{"level":"info","time":"2026-11-07T19:22:15+03:00","caller":"/Users/vladislav/Desktop/GitHub/go-cloud-file-storage/internal/app/app.go:82","message":"app - Run - signal: interrupt"}
+{"level":"info","time":"2026-11-07T19:22:15+03:00","caller":"/Users/vladislav/Desktop/GitHub/go-cloud-file-storage/internal/app/app.go:58","message":"httpserver - Server - Shutdown"}
