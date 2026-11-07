@@ -11,8 +11,11 @@ nginx
 .gitignore
 
 coverage.txt
+coverage.html
 
 docker-compose.yml
+
+out
 
 LICENSE
 Makefile

@@ -14,6 +14,7 @@ x-backend-app-environment: &x-backend-app-environment
   HTTP_PORT: ${HTTP_PORT}
   # Logger
   LOG_LEVEL: ${LOG_LEVEL}
+  LOG_FOLDER: app/out/logs
   # PG
   PG_POOL_MAX: ${PG_POOL_MAX}
   PG_URL: ${PG_URL}

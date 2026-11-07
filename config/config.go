@@ -25,7 +25,8 @@ type (
 	}
 
 	log struct {
-		Level string `env:"LOG_LEVEL,required"`
+		Level  string `env:"LOG_LEVEL,required"`
+		Folder string `env:"LOG_FOLDER" envDefault:"out/logs"`
 	}
 
 	pg struct {

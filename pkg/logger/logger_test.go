@@ -16,17 +16,28 @@ var errTest = errors.New("test error")
 
 // newBufferedLogger. Helper to replace underlying zerolog writer with a buffer and capture logs.
 func newBufferedLogger(level string) (*Logger, *bytes.Buffer) {
-	l := New(level)
+	// Use a temp directory for test logs
+	tmpDir := os.TempDir()
+	l, err := New(level, tmpDir)
+	if err != nil {
+		panic(err)
+	}
 	buf := &bytes.Buffer{}
 	// Recreate the zerolog.Logger to write into buffer while keeping similar options
 	// We keep the same skip frame count so caller field exists, but we don't assert its value
-	zl := zerolog.New(buf).With().Timestamp().Logger()
-	l.logger = new(zl)
+	// Important: set the level on the new logger to match the requested level
+	zl := zerolog.
+		New(buf).
+		With().
+		Timestamp().
+		Logger().
+		Level(parseLevel(level))
+	l.logger = &zl
 
 	return l, buf
 }
 
-func TestNewSetsGlobalLevel(t *testing.T) {
+func TestNewSetsLoggerLevel(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -40,16 +51,23 @@ func TestNewSetsGlobalLevel(t *testing.T) {
 		{"unknown", zerolog.InfoLevel}, // default path
 	}
 
+	tmpDir := os.TempDir()
 	for _, tc := range cases {
-		l := New(tc.in)
+		l, err := New(tc.in, tmpDir)
+
+		if err != nil {
+			t.Fatalf("New(%q, %q) returned error: %v", tc.in, tmpDir, err)
+		}
 
 		if l == nil || l.logger == nil {
-			t.Fatalf("New(%q) returned nil logger", tc.in)
+			t.Fatalf("New(%q, %q) returned nil logger", tc.in, tmpDir)
 		}
 
-		if got := zerolog.GlobalLevel(); got != tc.want {
-			t.Fatalf("New(%q) global level = %v, want %v", tc.in, got, tc.want)
+		if got := l.logger.GetLevel(); got != tc.want {
+			t.Fatalf("New(%q, %q) global level = %v, want %v", tc.in, tmpDir, got, tc.want)
 		}
+
+		l.Close()
 	}
 }
 
@@ -188,7 +206,8 @@ func TestFatal_ExitsAndLogs(t *testing.T) {
 		t.Fatalf("expected non-nil error due to os.Exit in Fatal, got nil; output: %s", string(out))
 	}
 
-	if exitErr, ok := errors.AsType[*exec.ExitError](err); !ok {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
 		// Confirm exit code is non-zero; os.Exit(1) specifically
 		if status := exitErr.ExitCode(); status != 1 {
 			t.Fatalf("expected exit code 1, got %d; output: %s", status, string(out))

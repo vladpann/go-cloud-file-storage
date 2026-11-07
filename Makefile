@@ -50,7 +50,8 @@ format: ### Run code formatter
 .PHONY: format
 
 run: deps
-	@go mod download && \
+	@export LOG_FOLDER=${PROJECT_ROOT}/out/logs && \
+	go mod download && \
 	CGO_ENABLED=0 go run -tags migrate ./cmd/app
 .PHONY: run
 
@@ -74,8 +75,10 @@ linter-dotenv: ### check by dotenv linter
 	@dotenv-linter
 .PHONY: linter-dotenv
 
-test: ### run test
-	@go test -v -race -covermode atomic -coverprofile=coverage.txt ./internal/... ./pkg/...
+test: ### run test and generate HTML coverage report
+	@go test -v -race -covermode atomic -coverprofile=coverage.out ./internal/... ./pkg/...
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated: coverage.html"
 .PHONY: test
 
 migrate-create:  ### create new migration
