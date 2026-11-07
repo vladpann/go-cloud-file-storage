@@ -2,10 +2,14 @@ package logger
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 type Interface interface {
@@ -18,39 +22,43 @@ type Interface interface {
 
 type Logger struct {
 	logger *zerolog.Logger
+	lg     *lumberjack.Logger
 }
 
 var _ Interface = (*Logger)(nil)
 
-func New(level string) *Logger {
-	var l zerolog.Level
+func New(level string, folder string) (*Logger, error) {
+	l := parseLevel(level)
 
-	switch strings.ToLower(level) {
-	case "error":
-		l = zerolog.ErrorLevel
-	case "warn":
-		l = zerolog.WarnLevel
-	case "info":
-		l = zerolog.InfoLevel
-	case "debug":
-		l = zerolog.DebugLevel
-	default:
-		l = zerolog.InfoLevel
+	if err := os.MkdirAll(folder, 0755); err != nil {
+		return nil, fmt.Errorf("logger - New - os.MkfirAll: %w", err)
 	}
 
-	zerolog.SetGlobalLevel(l)
+	timestamp := time.Now().UTC().Format("2006-01-02T15-04-05.000000")
+	lj := &lumberjack.Logger{
+		Filename:   filepath.Join(folder, fmt.Sprintf("%s.log", timestamp)),
+		MaxSize:    50,
+		MaxAge:     1,
+		MaxBackups: 0,
+		Compress:   false,
+		LocalTime:  true,
+	}
+
+	w := io.MultiWriter(os.Stdout, lj)
 
 	skipFrameCount := 3
 	logger := zerolog.
-		New(os.Stdout).
+		New(w).
 		With().
 		Timestamp().
 		CallerWithSkipFrameCount(zerolog.CallerSkipFrameCount + skipFrameCount).
-		Logger()
+		Logger().
+		Level(l)
 
 	return &Logger{
-		logger: new(logger),
-	}
+		logger: &logger,
+		lg:     lj,
+	}, nil
 }
 
 func (l *Logger) Debug(message any, args ...any) {
@@ -75,6 +83,21 @@ func (l *Logger) Fatal(message any, args ...any) {
 	os.Exit(1)
 }
 
+func parseLevel(level string) zerolog.Level {
+	switch strings.ToLower(level) {
+	case "error":
+		return zerolog.ErrorLevel
+	case "warn":
+		return zerolog.WarnLevel
+	case "info":
+		return zerolog.InfoLevel
+	case "debug":
+		return zerolog.DebugLevel
+	default:
+		return zerolog.InfoLevel
+	}
+}
+
 func (l *Logger) log(level zerolog.Level, message string, args ...any) {
 	if len(args) == 0 {
 		l.logger.WithLevel(level).Msg(message)
@@ -92,4 +115,8 @@ func (l *Logger) msg(level zerolog.Level, message any, args ...any) {
 	default:
 		l.log(level, fmt.Sprintf("%s message %v has unknown type %v", level, message, msg), args...)
 	}
+}
+
+func (l *Logger) Close() {
+	l.lg.Close()
 }

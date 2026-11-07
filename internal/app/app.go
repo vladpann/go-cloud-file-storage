@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -60,7 +61,11 @@ func (s *servers) shutdownServers(l logger.Interface) {
 }
 
 func Run(cfg *config.Config) {
-	l := logger.New(cfg.Log.Level)
+	l, err := logger.New(cfg.Log.Level, cfg.Log.Folder)
+	if err != nil {
+		log.Fatalf("app - Run - logger.New: %v", err)
+	}
+	defer l.Close()
 
 	//ctx := context.Background()
 
