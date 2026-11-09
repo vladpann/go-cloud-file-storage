@@ -81,17 +81,40 @@ test: ### run test and generate HTML coverage report
 	@echo "Coverage report generated: coverage.html"
 .PHONY: test
 
-migrate-create:  ### create new migration
-	@migrate create -ext sql -dir migrations '$(word 2,$(MAKECMDGOALS))'
+MIGRATIONS_DIR ?= migrations
+GOOSE_DB       ?= postgres '$(PG_URL)?sslmode=disable'
+
+migrate-create: ## migration create (make migrate-create name=create_users)
+	@if [ -z "$(name)" ]; then \
+		echo 'The required "name" parameter is missing. Example: make migrate-create name=create_users'; \
+		exit 1; \
+	fi
+	@goose -dir $(MIGRATIONS_DIR) create -s "$(name)" sql
 .PHONY: migrate-create
 
-migrate-up: ### migration up
-	@migrate -path migrations -database '$(PG_URL)?sslmode=disable' up
+migrate-action: ## goose action (make migrate-action action=up)
+	@if [ -z "$(action)" ]; then \
+		echo 'The required "action" parameter is missing. Example: make migrate-action action=up'; \
+		exit 1; \
+	fi
+	@goose -dir $(MIGRATIONS_DIR) $(GOOSE_DB) $(action)
+.PHONY: migrate-action
+
+migrate-up: ## migration up
+	@$(MAKE) migrate-action action=up
 .PHONY: migrate-up
+
+migrate-down: ## migration down
+	@$(MAKE) migrate-action action=down
+.PHONY: migrate-down
+
+migrate-status: ## migration status
+	@$(MAKE) migrate-action action=status
+.PHONY: migrate-status
 
 bin-deps: ### install tools
 	@go install tool
-	@go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate
+	@go install -tags 'postgres' github.com/pressly/goose/v3/cmd/goose@v3.29.0
 .PHONY: bin-deps
 
 pre-commit: deps format linter-golangci test ### run pre-commit
