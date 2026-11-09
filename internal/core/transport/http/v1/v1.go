@@ -5,6 +5,8 @@ import (
 	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
 )
 
+var ApiVersion = "v1"
+
 type V1 struct {
 	l logger.Interface
 	v *validator.Validate

@@ -1,6 +1,7 @@
 package core_http
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -28,7 +29,8 @@ func NewRouter(r chi.Router, cfg *config.Config, l logger.Interface) {
 	}
 
 	// Options
-	//router.Use(middleware.Logger())
+	r.Use(core_http_middleware.Recovery(l))
+	r.Use(core_http_middleware.Logger(l))
 
 	// K8s probe
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
@@ -36,7 +38,7 @@ func NewRouter(r chi.Router, cfg *config.Config, l logger.Interface) {
 	})
 
 	// Routers
-	r.Route("/api/v1", func(r chi.Router) {
+	r.Route(fmt.Sprintf("/api/%s", v1.ApiVersion), func(r chi.Router) {
 		v1.NewRoutes(r, l)
 	})
 }
