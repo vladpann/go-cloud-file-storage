@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/caarlos0/env/v11"
 )
@@ -12,7 +13,9 @@ type (
 		HTTP    http
 		Log     log
 		PG      pg
+		Redis   redis
 		Tracing tracing
+		Session session
 	}
 
 	app struct {
@@ -34,11 +37,21 @@ type (
 		URL     string `env:"PG_URL,required"`
 	}
 
+	redis struct {
+		Addr     string `env:"REDIS_ADDR" envDefault:"localhost:6379"`
+		Password string `env:"REDIS_PASSWORD,required"`
+	}
+
 	tracing struct {
 		Enabled      bool    `env:"TRACING_ENABLED" envDefault:"false"`
 		OTLPEndpoint string  `env:"TRACING_OTLP_ENDPOINT" evnDefault:"localhost:4317"`
 		OTLPInsecure bool    `env:"TRACING_OTLP_INSECURE" envDefault:"true"`
 		SampleRate   float64 `env:"TRACING_SAMPLE_RATE" envDefault:"0.1"`
+	}
+
+	session struct {
+		TTL             time.Duration `env:"SESSION_TTL" envDefault:"24h"`
+		CleanupInterval time.Duration `env:"SESSION_CLEANUP_INTERVAL" envDefault:"12h"`
 	}
 )
 
