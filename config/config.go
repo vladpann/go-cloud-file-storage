@@ -14,8 +14,8 @@ type (
 		Log     log
 		PG      pg
 		Redis   redis
-		Tracing tracing
 		Session session
+		Tracing tracing
 	}
 
 	app struct {
@@ -42,16 +42,16 @@ type (
 		Password string `env:"REDIS_PASSWORD,required"`
 	}
 
-	tracing struct {
-		Enabled      bool    `env:"TRACING_ENABLED" envDefault:"false"`
-		OTLPEndpoint string  `env:"TRACING_OTLP_ENDPOINT" evnDefault:"localhost:4317"`
-		OTLPInsecure bool    `env:"TRACING_OTLP_INSECURE" envDefault:"true"`
-		SampleRate   float64 `env:"TRACING_SAMPLE_RATE" envDefault:"0.1"`
+	session struct {
+		TTL          time.Duration `env:"SESSION_TTL" envDefault:"24h"`
+		CookieSecure bool          `env:"SESSION_COOKIE_SECURE" envDefault:"true"`
 	}
 
-	session struct {
-		TTL             time.Duration `env:"SESSION_TTL" envDefault:"24h"`
-		CleanupInterval time.Duration `env:"SESSION_CLEANUP_INTERVAL" envDefault:"12h"`
+	tracing struct {
+		Enabled      bool    `env:"TRACING_ENABLED" envDefault:"false"`
+		OTLPEndpoint string  `env:"TRACING_OTLP_ENDPOINT" envDefault:"localhost:4317"`
+		OTLPInsecure bool    `env:"TRACING_OTLP_INSECURE" envDefault:"true"`
+		SampleRate   float64 `env:"TRACING_SAMPLE_RATE" envDefault:"0.1"`
 	}
 )
 

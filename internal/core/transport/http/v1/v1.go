@@ -2,26 +2,26 @@ package core_http_v1
 
 import (
 	"github.com/go-playground/validator/v10"
-	core_http_v1_users "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/v1/users"
+	users_transport_http "github.com/vladpann/go-cloud-file-storage/internal/features/users/transport/http"
 	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
 )
 
 var ApiVersion = "v1"
 
-// V1 aggregates all v1 transport handlers
+// V1 aggregates all v1 transport
 type V1 struct {
-	Users     *core_http_v1_users.UsersTransport
+	Users     *users_transport_http.UsersHTTPHandler
 	l         logger.Interface
 	validator *validator.Validate
 }
 
 // NewV1 creates new V1 transport group
 func NewV1(
-	usersTransport *core_http_v1_users.UsersTransport,
+	usersHTTPHandler *users_transport_http.UsersHTTPHandler,
 	l logger.Interface,
 ) *V1 {
 	return &V1{
-		Users:     usersTransport,
+		Users:     usersHTTPHandler,
 		l:         l,
 		validator: validator.New(validator.WithRequiredStructEnabled()),
 	}

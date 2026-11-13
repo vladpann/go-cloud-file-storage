@@ -13,11 +13,11 @@ import (
 	core_http "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http"
 	core_http_middleware "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/middleware"
 	core_http_v1 "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/v1"
-	core_http_v1_users "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/v1/users"
 	sessions_repository_redis "github.com/vladpann/go-cloud-file-storage/internal/features/sessions/repository/redis"
 	sessions_service "github.com/vladpann/go-cloud-file-storage/internal/features/sessions/service"
 	users_repository_postgres "github.com/vladpann/go-cloud-file-storage/internal/features/users/repository/postgres"
 	users_service "github.com/vladpann/go-cloud-file-storage/internal/features/users/service"
+	users_transport_http "github.com/vladpann/go-cloud-file-storage/internal/features/users/transport/http"
 	"github.com/vladpann/go-cloud-file-storage/pkg/httpserver"
 	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
 	"github.com/vladpann/go-cloud-file-storage/pkg/postgres"
@@ -48,17 +48,18 @@ func initFeatures(cfg *config.Config, pg *postgres.Postgres, rdb *redis.Redis) f
 	}
 }
 
-func initV1Transports(feat features, l logger.Interface) *core_http_v1.V1 {
+func initV1HTTPHandlers(cfg *config.Config, feat features, l logger.Interface) *core_http_v1.V1 {
 	authMiddleware := core_http_middleware.Auth(l, feat.sessions)
 
 	// Create shared validator
 	v := validator.New(validator.WithRequiredStructEnabled())
 
 	// Initialize transports
-	usersTransport := core_http_v1_users.NewUsersTransport(
+	usersTransport := users_transport_http.NewUsersHTTPHandler(
 		feat.users,
 		feat.sessions,
 		authMiddleware,
+		cfg,
 		l,
 		v,
 	)
@@ -145,8 +146,8 @@ func Run(cfg *config.Config) {
 	defer rdb.Close()
 
 	f := initFeatures(cfg, pg, rdb)
-	v1Transports := initV1Transports(f, l)
-	s := initServers(cfg, v1Transports, l)
+	v1HTTPHandlers := initV1HTTPHandlers(cfg, f, l)
+	s := initServers(cfg, v1HTTPHandlers, l)
 	s.startServers()
 	s.waitForShutdown(l)
 }

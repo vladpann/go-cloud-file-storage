@@ -1,26 +1,26 @@
-package core_http_v1_users
+package users_transport_http
 
 import (
 	"net/http"
 	"time"
 
-	core_http_request "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/v1/request"
-	core_http_response "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/v1/response"
+	core_http_request "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/request"
+	core_http_response "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/response"
+	"github.com/vladpann/go-cloud-file-storage/internal/domain"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 )
 
-
 // SignIn handles user authentication
-func (t *UsersTransport) SignIn(w http.ResponseWriter, r *http.Request) {
+func (h *UsersHTTPHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	ctx, span := tracer.Start(ctx, "UsersTransport.SignIn")
+	ctx, span := tracer.Start(ctx, "UsersHTTPHandler.SignIn")
 	defer span.End()
 
-	responseHandler := core_http_response.NewHTTPResponseHandler(t.l, w)
+	responseHandler := core_http_response.NewHTTPResponseHandler(h.l, w)
 
 	var request SignInRequest
-	if err := core_http_request.DecodeAndValidateRequest(r, &request, t.validator); err != nil {
+	if err := core_http_request.DecodeAndValidateRequest(r, &request, h.validator); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to decode and validate request")
 		responseHandler.ErrorResponse(err, "failed to decode and validate HTTP request")
@@ -31,7 +31,9 @@ func (t *UsersTransport) SignIn(w http.ResponseWriter, r *http.Request) {
 	span.SetAttributes(attribute.String("user.username", request.Username))
 
 	// Authenticate user
-	userID, err := t.usersService.SignIn(ctx, request.Username, request.Password)
+	username, password := domainFromSignInDTO(request)
+
+	userID, err := h.usersService.SignIn(ctx, username, password)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "authentication failed")
@@ -44,7 +46,7 @@ func (t *UsersTransport) SignIn(w http.ResponseWriter, r *http.Request) {
 	span.AddEvent("user authenticated")
 
 	// Create session
-	session, err := t.sessionsService.CreateSession(ctx, userID)
+	session, err := h.sessionsService.CreateSession(ctx, userID)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to create session")
@@ -66,7 +68,7 @@ func (t *UsersTransport) SignIn(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Expires:  session.ExpiresAt,
 		HttpOnly: true,
-		Secure:   false, // Set to true in production with HTTPS
+		Secure:   h.config.Session.CookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	}
 	http.SetCookie(w, cookie)
@@ -74,10 +76,11 @@ func (t *UsersTransport) SignIn(w http.ResponseWriter, r *http.Request) {
 	span.AddEvent("session cookie set")
 	span.SetStatus(codes.Ok, "sign in successful")
 
-	response := SignInResponse{
-		SessionID: session.ID,
-		ExpiresAt: session.ExpiresAt,
-	}
+	response := SignInResponse(signInResponseFromDomain(domain.User{Username: username}))
 
 	responseHandler.JSONResponse(response, http.StatusOK)
+}
+
+func domainFromSignInDTO(dto SignInRequest) (username string, password string) {
+	return dto.Username, dto.Password
 }

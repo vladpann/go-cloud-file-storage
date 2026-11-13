@@ -1,20 +1,22 @@
-package core_http_v1_users
+package users_transport_http
 
 import (
 	"context"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/vladpann/go-cloud-file-storage/config"
 	core_http_middleware "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/middleware"
 	"github.com/vladpann/go-cloud-file-storage/internal/domain"
 	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
 )
 
-// UsersTransport handles HTTP requests for user operations
-type UsersTransport struct {
+// UsersHTTPHandler handles HTTP requests for user operations
+type UsersHTTPHandler struct {
 	usersService    UsersService
 	sessionsService SessionsService
 	authMiddleware  core_http_middleware.Middleware
+	config          *config.Config
 	l               logger.Interface
 	validator       *validator.Validate
 }
@@ -40,17 +42,19 @@ type SessionsService interface {
 	) (domain.Session, error)
 }
 
-func NewUsersTransport(
+func NewUsersHTTPHandler(
 	usersService UsersService,
 	sessionsService SessionsService,
 	authMiddleware core_http_middleware.Middleware,
+	config *config.Config,
 	l logger.Interface,
 	validator *validator.Validate,
-) *UsersTransport {
-	return &UsersTransport{
+) *UsersHTTPHandler {
+	return &UsersHTTPHandler{
 		usersService:    usersService,
 		sessionsService: sessionsService,
 		authMiddleware:  authMiddleware,
+		config:          config,
 		l:               l,
 		validator:       validator,
 	}

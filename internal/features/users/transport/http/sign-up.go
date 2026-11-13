@@ -1,30 +1,31 @@
-package core_http_v1_users
+package users_transport_http
 
 import (
 	"net/http"
 	"time"
 
-	core_http_request "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/v1/request"
-	core_http_response "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/v1/response"
+	core_http_request "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/request"
+	core_http_response "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/response"
+	"github.com/vladpann/go-cloud-file-storage/internal/domain"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 )
 
-var tracer = otel.Tracer("github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/v1/users")
+var tracer = otel.Tracer("github.com/vladpann/go-cloud-file-storage/internal/features/users/transport/http")
 
 const sessionCookieName = "session_id"
 
 // SignUp handles user registration
-func (t *UsersTransport) SignUp(w http.ResponseWriter, r *http.Request) {
+func (h *UsersHTTPHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	ctx, span := tracer.Start(ctx, "UsersTransport.SignUp")
 	defer span.End()
 
-	responseHandler := core_http_response.NewHTTPResponseHandler(t.l, w)
+	responseHandler := core_http_response.NewHTTPResponseHandler(h.l, w)
 
-	var request CreateUserRequest
-	if err := core_http_request.DecodeAndValidateRequest(r, &request, t.validator); err != nil {
+	var request SignUpRequest
+	if err := core_http_request.DecodeAndValidateRequest(r, &request, h.validator); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to decode and validate request")
 		responseHandler.ErrorResponse(err, "failed to decode and validate HTTP request")
@@ -34,9 +35,9 @@ func (t *UsersTransport) SignUp(w http.ResponseWriter, r *http.Request) {
 
 	span.SetAttributes(attribute.String("user.username", request.Username))
 
-	username, password, repeatPassword := domainFromDTO(request)
+	username, password, repeatPassword := domainFromSignUpDTO(request)
 
-	userDomain, err := t.usersService.SignUp(ctx, username, password, repeatPassword)
+	userDomain, err := h.usersService.SignUp(ctx, username, password, repeatPassword)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to create user")
@@ -52,7 +53,7 @@ func (t *UsersTransport) SignUp(w http.ResponseWriter, r *http.Request) {
 	span.AddEvent("user created")
 
 	// Create session immediately after registration
-	session, err := t.sessionsService.CreateSession(ctx, userDomain.ID)
+	session, err := h.sessionsService.CreateSession(ctx, userDomain.ID)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to create session")
@@ -74,7 +75,7 @@ func (t *UsersTransport) SignUp(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Expires:  session.ExpiresAt,
 		HttpOnly: true,
-		Secure:   false, // Set to true in production with HTTPS
+		Secure:   h.config.Session.CookieSecure,
 		SameSite: http.SameSiteLaxMode,
 	}
 	http.SetCookie(w, cookie)
@@ -82,11 +83,11 @@ func (t *UsersTransport) SignUp(w http.ResponseWriter, r *http.Request) {
 	span.AddEvent("session cookie set")
 	span.SetStatus(codes.Ok, "user created and logged in successfully")
 
-	response := CreateUserResponse(createUserResponseFromDomain(userDomain, session))
+	response := SignUpResponse(signUpResponseFromDomain(domain.User{Username: username}))
 
 	responseHandler.JSONResponse(response, http.StatusCreated)
 }
 
-func domainFromDTO(dto CreateUserRequest) (username string, password string, repeatPassword string) {
+func domainFromSignUpDTO(dto SignUpRequest) (username string, password string, repeatPassword string) {
 	return dto.Username, dto.Password, dto.RepeatPassword
 }
