@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-func NewRouter(r chi.Router, cfg *config.Config, l logger.Interface) {
+func NewRouter(r chi.Router, cfg *config.Config, v1Transports *v1.V1, l logger.Interface) {
 	if cfg.Tracing.Enabled {
 		r.Use(func(next http.Handler) http.Handler {
 			return otelhttp.NewHandler(next, "http",
@@ -39,6 +39,6 @@ func NewRouter(r chi.Router, cfg *config.Config, l logger.Interface) {
 
 	// Routers
 	r.Route(fmt.Sprintf("/api/%s", v1.ApiVersion), func(r chi.Router) {
-		v1.NewRoutes(r, l)
+		v1.NewRoutes(r, v1Transports, l)
 	})
 }

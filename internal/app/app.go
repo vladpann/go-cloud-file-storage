@@ -8,28 +8,69 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/vladpann/go-cloud-file-storage/config"
 	core_http "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http"
+	core_http_middleware "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/middleware"
+	core_http_v1 "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/v1"
+	sessions_repository_redis "github.com/vladpann/go-cloud-file-storage/internal/features/sessions/repository/redis"
+	sessions_service "github.com/vladpann/go-cloud-file-storage/internal/features/sessions/service"
+	users_repository_postgres "github.com/vladpann/go-cloud-file-storage/internal/features/users/repository/postgres"
+	users_service "github.com/vladpann/go-cloud-file-storage/internal/features/users/service"
+	users_transport_http "github.com/vladpann/go-cloud-file-storage/internal/features/users/transport/http"
 	"github.com/vladpann/go-cloud-file-storage/pkg/httpserver"
 	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
 	"github.com/vladpann/go-cloud-file-storage/pkg/postgres"
+	"github.com/vladpann/go-cloud-file-storage/pkg/redis"
 	"github.com/vladpann/go-cloud-file-storage/pkg/tracing"
 )
 
-type features struct{}
+type features struct {
+	sessions *sessions_service.SessionsService
+	users    *users_service.UsersService
+}
 
 type servers struct {
 	http *httpserver.Server
 }
 
-func initFeatures(pg *postgres.Postgres) features {
-	return features{}
+func initFeatures(cfg *config.Config, pg *postgres.Postgres, rdb *redis.Redis) features {
+	sessionsRepository := sessions_repository_redis.New(rdb)
+	sessionsService := sessions_service.New(cfg, sessionsRepository)
+
+	usersRepository := users_repository_postgres.New(pg)
+	passwordHasher := users_service.NewPasswordHasher()
+	usersService := users_service.New(usersRepository, passwordHasher)
+
+	return features{
+		sessions: sessionsService,
+		users:    usersService,
+	}
 }
 
-func initServers(cfg *config.Config, feat features, l logger.Interface) servers {
+func initV1HTTPHandlers(cfg *config.Config, feat features, l logger.Interface) *core_http_v1.V1 {
+	authMiddleware := core_http_middleware.Auth(l, feat.sessions)
+
+	// Create shared validator
+	v := validator.New(validator.WithRequiredStructEnabled())
+
+	// Initialize transports
+	usersTransport := users_transport_http.NewUsersHTTPHandler(
+		feat.users,
+		feat.sessions,
+		authMiddleware,
+		cfg,
+		l,
+		v,
+	)
+
+	return core_http_v1.NewV1(usersTransport, l)
+}
+
+func initServers(cfg *config.Config, v1Transports *core_http_v1.V1, l logger.Interface) servers {
 	// HTTP Server
 	httpServer := httpserver.New(l, httpserver.Port(cfg.HTTP.Port))
-	core_http.NewRouter(httpServer.Router, cfg, l)
+	core_http.NewRouter(httpServer.Router, cfg, v1Transports, l)
 
 	return servers{
 		http: httpServer,
@@ -90,14 +131,23 @@ func Run(cfg *config.Config) {
 	}()
 
 	// Repository
+	// PG
 	pg, err := postgres.New(cfg.PG.URL, postgres.MaxPoolSize(cfg.PG.PoolMax))
 	if err != nil {
 		l.Fatal(fmt.Errorf("app - Run - postgres.New: %w", err))
 	}
 	defer pg.Close()
 
-	f := initFeatures(pg)
-	s := initServers(cfg, f, l)
+	// Redis
+	rdb, err := redis.New(cfg.Redis.Addr, cfg.Redis.Password)
+	if err != nil {
+		l.Fatal(fmt.Errorf("app - Run - redis.New: %w", err))
+	}
+	defer rdb.Close()
+
+	f := initFeatures(cfg, pg, rdb)
+	v1HTTPHandlers := initV1HTTPHandlers(cfg, f, l)
+	s := initServers(cfg, v1HTTPHandlers, l)
 	s.startServers()
 	s.waitForShutdown(l)
 }
