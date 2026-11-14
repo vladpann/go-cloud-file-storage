@@ -38,8 +38,6 @@ func newBufferedLogger(level string) (*Logger, *bytes.Buffer) {
 }
 
 func TestNewSetsLoggerLevel(t *testing.T) {
-	t.Parallel()
-
 	cases := []struct {
 		in   string
 		want zerolog.Level
@@ -72,8 +70,6 @@ func TestNewSetsLoggerLevel(t *testing.T) {
 }
 
 func TestInfoAndWarn_LogMessageWithAndWithoutArgs(t *testing.T) {
-	t.Parallel()
-
 	l, buf := newBufferedLogger("info")
 
 	l.Info("hello")
@@ -97,8 +93,6 @@ func TestInfoAndWarn_LogMessageWithAndWithoutArgs(t *testing.T) {
 }
 
 func TestDebug_RespectsLevel(t *testing.T) {
-	t.Parallel()
-
 	// when level is info, debug should not emit
 	l, buf := newBufferedLogger("info")
 	l.Debug("dbg %d", 1)
@@ -122,8 +116,6 @@ func TestDebug_RespectsLevel(t *testing.T) {
 }
 
 func TestError_LogsErrorAndDebugWhenDebugLevel(t *testing.T) {
-	t.Parallel()
-
 	// info mode => only error
 	l, buf := newBufferedLogger("info")
 	l.Error("boom")
@@ -154,8 +146,6 @@ func TestError_LogsErrorAndDebugWhenDebugLevel(t *testing.T) {
 }
 
 func TestMsg_TypeSwitch(t *testing.T) {
-	t.Parallel()
-
 	l, buf := newBufferedLogger("debug")
 
 	// string
@@ -186,8 +176,6 @@ func TestMsg_TypeSwitch(t *testing.T) {
 }
 
 func TestFatal_ExitsAndLogs(t *testing.T) {
-	t.Parallel()
-
 	if os.Getenv("LOGGER_FATAL_SUBPROC") == "1" {
 		// child process: run Fatal and exit
 		l, _ := newBufferedLogger("debug")

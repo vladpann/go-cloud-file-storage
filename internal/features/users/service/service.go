@@ -3,7 +3,6 @@ package user_service
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/vladpann/go-cloud-file-storage/internal/domain"
 )
 
@@ -17,12 +16,6 @@ type UsersService struct {
 	passwordHasher  PasswordHasher
 }
 
-type UserModel struct {
-	ID           uuid.UUID
-	Username     string
-	PasswordHash []byte
-}
-
 type UsersRepository interface {
 	SignUp(
 		ctx context.Context,
@@ -32,7 +25,7 @@ type UsersRepository interface {
 	GetUserByUsername(
 		ctx context.Context,
 		username string,
-	) (UserModel, error)
+	) (domain.User, error)
 }
 
 func New(
