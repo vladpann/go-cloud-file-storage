@@ -11,7 +11,7 @@ func NewRoutes(apiV1Group chi.Router, v1Transports *V1, l logger.Interface) {
 	apiV1Group.Route("/auth", func(r chi.Router) {
 		r.Post("/sign-up", v1Transports.Users.SignUp)
 		r.Post("/sign-in", v1Transports.Users.SignIn)
-		// r.Post("/sign-out", v1Transports.Users.SignOut)
+		r.Post("/sign-out", v1Transports.Users.SignOut)
 	})
 
 	// Protected routes (require authentication)

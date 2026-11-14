@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/vladpann/go-cloud-file-storage/internal/domain"
 	core_errors "github.com/vladpann/go-cloud-file-storage/internal/errors"
-	user_service "github.com/vladpann/go-cloud-file-storage/internal/features/users/service"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 )
@@ -15,7 +15,7 @@ import (
 func (r *UsersRepository) GetUserByUsername(
 	ctx context.Context,
 	username string,
-) (user_service.UserModel, error) {
+) (domain.User, error) {
 	ctx, span := tracer.Start(ctx, "UsersRepository.GetUserByUsername")
 	defer span.End()
 
@@ -35,7 +35,7 @@ func (r *UsersRepository) GetUserByUsername(
 		err = fmt.Errorf("users_repository_postgres - GetUserByUsername - r.pg.Builder: %w", err)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to build SQL query")
-		return user_service.UserModel{}, err
+		return domain.User{}, err
 	}
 
 	span.SetAttributes(attribute.String("db.statement", sql))
@@ -43,7 +43,7 @@ func (r *UsersRepository) GetUserByUsername(
 
 	row := r.pg.Pool.QueryRow(ctx, sql, args...)
 
-	var userModel user_service.UserModel
+	var userModel UserModel
 	err = row.Scan(
 		&userModel.ID,
 		&userModel.Username,
@@ -54,17 +54,19 @@ func (r *UsersRepository) GetUserByUsername(
 			err = fmt.Errorf("users_repository_postgres - GetUserByUsername: %w", core_errors.ErrNotFound)
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "user not found")
-			return user_service.UserModel{}, err
+			return domain.User{}, err
 		}
 
 		err = fmt.Errorf("users_repository_postgres - GetUserByUsername - row.Scan: %w", err)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to scan row")
-		return user_service.UserModel{}, err
+		return domain.User{}, err
 	}
+
+	userDomain := userDomainFromModel(userModel)
 
 	span.SetAttributes(attribute.String("user.id", userModel.ID.String()))
 	span.SetStatus(codes.Ok, "user found")
 
-	return userModel, nil
+	return userDomain, nil
 }

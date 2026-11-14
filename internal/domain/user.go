@@ -3,6 +3,7 @@ package domain
 import "github.com/google/uuid"
 
 type User struct {
-	ID       uuid.UUID
-	Username string
+	ID           uuid.UUID
+	Username     string
+	PasswordHash []byte
 }
