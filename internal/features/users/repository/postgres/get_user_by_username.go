@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/vladpann/go-cloud-file-storage/internal/domain"
-	core_errors "github.com/vladpann/go-cloud-file-storage/internal/errors"
+	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
+	core_errors "github.com/vladpann/go-cloud-file-storage/internal/core/errors"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 )

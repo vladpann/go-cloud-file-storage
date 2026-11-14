@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator/v10"
-	core_errors "github.com/vladpann/go-cloud-file-storage/internal/errors"
+	core_errors "github.com/vladpann/go-cloud-file-storage/internal/core/errors"
 )
 
 const (

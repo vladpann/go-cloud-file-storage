@@ -2,7 +2,7 @@ package users_repository_postgres
 
 import (
 	"github.com/google/uuid"
-	"github.com/vladpann/go-cloud-file-storage/internal/domain"
+	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 )
 
 type UserModel struct {

@@ -1,7 +1,7 @@
 package users_transport_http
 
 import (
-	"github.com/vladpann/go-cloud-file-storage/internal/domain"
+	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 )
 
 // SignUpRequest represents the sign-up request

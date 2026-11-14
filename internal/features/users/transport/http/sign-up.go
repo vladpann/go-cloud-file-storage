@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 	core_http_request "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/request"
 	core_http_response "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/response"
-	"github.com/vladpann/go-cloud-file-storage/internal/domain"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
