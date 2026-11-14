@@ -40,6 +40,10 @@ type SessionsService interface {
 		ctx context.Context,
 		userID uuid.UUID,
 	) (domain.Session, error)
+	DeleteSession(
+		ctx context.Context,
+		sessionID uuid.UUID,
+	) error
 }
 
 func NewUsersHTTPHandler(

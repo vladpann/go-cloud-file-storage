@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -18,6 +19,15 @@ type Interface interface {
 	Warn(message string, args ...any)
 	Error(message any, args ...any)
 	Fatal(message any, args ...any)
+
+	// Context-aware logging methods
+	DebugContext(ctx context.Context, message any, args ...any)
+	InfoContext(ctx context.Context, message string, args ...any)
+	WarnContext(ctx context.Context, message string, args ...any)
+	ErrorContext(ctx context.Context, message any, args ...any)
+
+	// GetZerolog returns the underlying zerolog.Logger for advanced use
+	GetZerolog() *zerolog.Logger
 }
 
 type Logger struct {
@@ -54,6 +64,9 @@ func New(level string, folder string) (*Logger, error) {
 		CallerWithSkipFrameCount(zerolog.CallerSkipFrameCount + skipFrameCount).
 		Logger().
 		Level(l)
+
+	// Set global logger for zerolog.Ctx to use
+	zerolog.DefaultContextLogger = &logger
 
 	return &Logger{
 		logger: &logger,
@@ -119,4 +132,62 @@ func (l *Logger) msg(level zerolog.Level, message any, args ...any) {
 
 func (l *Logger) Close() {
 	l.lg.Close()
+}
+
+// GetZerolog returns the underlying zerolog.Logger
+func (l *Logger) GetZerolog() *zerolog.Logger {
+	return l.logger
+}
+
+// Context-aware logging methods that use zerolog.Ctx to get logger from context
+
+func (l *Logger) DebugContext(ctx context.Context, message any, args ...any) {
+	logger := zerolog.Ctx(ctx)
+	if logger.GetLevel() == zerolog.Disabled || logger == zerolog.DefaultContextLogger {
+		logger = l.logger
+	}
+	l.msgWithLogger(logger, zerolog.DebugLevel, message, args...)
+}
+
+func (l *Logger) InfoContext(ctx context.Context, message string, args ...any) {
+	logger := zerolog.Ctx(ctx)
+	if logger.GetLevel() == zerolog.Disabled || logger == zerolog.DefaultContextLogger {
+		logger = l.logger
+	}
+	l.logWithLogger(logger, zerolog.InfoLevel, message, args...)
+}
+
+func (l *Logger) WarnContext(ctx context.Context, message string, args ...any) {
+	logger := zerolog.Ctx(ctx)
+	if logger.GetLevel() == zerolog.Disabled || logger == zerolog.DefaultContextLogger {
+		logger = l.logger
+	}
+	l.logWithLogger(logger, zerolog.WarnLevel, message, args...)
+}
+
+func (l *Logger) ErrorContext(ctx context.Context, message any, args ...any) {
+	logger := zerolog.Ctx(ctx)
+	if logger.GetLevel() == zerolog.Disabled || logger == zerolog.DefaultContextLogger {
+		logger = l.logger
+	}
+	l.msgWithLogger(logger, zerolog.ErrorLevel, message, args...)
+}
+
+func (l *Logger) logWithLogger(logger *zerolog.Logger, level zerolog.Level, message string, args ...any) {
+	if len(args) == 0 {
+		logger.WithLevel(level).Msg(message)
+	} else {
+		logger.WithLevel(level).Msgf(message, args...)
+	}
+}
+
+func (l *Logger) msgWithLogger(logger *zerolog.Logger, level zerolog.Level, message any, args ...any) {
+	switch msg := message.(type) {
+	case error:
+		l.logWithLogger(logger, level, msg.Error(), args...)
+	case string:
+		l.logWithLogger(logger, level, msg, args...)
+	default:
+		l.logWithLogger(logger, level, fmt.Sprintf("%s message %v has unknown type %v", level, message, msg), args...)
+	}
 }

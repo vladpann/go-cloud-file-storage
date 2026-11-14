@@ -37,7 +37,9 @@ func Logger(l logger.Interface) func(next http.Handler) http.Handler {
 				status = http.StatusOK
 			}
 
-			l.Info("%s", buildRequestMessage(r, status, ww.BytesWritten()))
+			// Use context-aware logging to include request_id
+			ctx := r.Context()
+			l.InfoContext(ctx, "%s", buildRequestMessage(r, status, ww.BytesWritten()))
 		})
 	}
 }

@@ -127,10 +127,6 @@ redis-keys: ### Show all Redis keys
 	@docker compose exec redis redis-cli -a $(REDIS_PASSWORD) --no-auth-warning KEYS "*"
 .PHONY: redis-keys
 
-redis-scan: ### Show all Redis keys with values
-	@docker compose exec redis redis-cli -a $(REDIS_PASSWORD) --no-auth-warning --scan
-.PHONY: redis-scan
-
 redis-flush: ### Flush all Redis data (dangerous!)
 	@echo "WARNING: This will delete ALL data from Redis!"
 	@read -p "Are you sure? (yes/no): " confirm; \

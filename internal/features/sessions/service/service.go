@@ -23,6 +23,11 @@ type SessionsRepository interface {
 		ctx context.Context,
 		sessionID uuid.UUID,
 	) (domain.Session, error)
+
+	DeleteSession(
+		ctx context.Context,
+		sessionID uuid.UUID,
+	) error
 }
 
 func New(
