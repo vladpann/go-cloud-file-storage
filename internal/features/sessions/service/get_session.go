@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/vladpann/go-cloud-file-storage/internal/domain"
+	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 )
 
 func (s *SessionsService) GetSession(

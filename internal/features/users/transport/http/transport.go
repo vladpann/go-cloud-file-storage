@@ -6,8 +6,8 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/vladpann/go-cloud-file-storage/config"
+	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 	core_http_middleware "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/middleware"
-	"github.com/vladpann/go-cloud-file-storage/internal/domain"
 	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
 )
 

@@ -1,9 +1,11 @@
 package users_transport_http
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
+	core_errors "github.com/vladpann/go-cloud-file-storage/internal/core/errors"
 	core_http_response "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/response"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -20,6 +22,8 @@ func (h *UsersHTTPHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 	// Get session cookie
 	cookie, err := r.Cookie(sessionCookieName)
 	if err != nil {
+		// Wrap with ErrInvalidArgument to return 400 instead of 500
+		err = fmt.Errorf("session cookie not found: %w", core_errors.ErrInvalidArgument)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "session cookie not found")
 		responseHandler.ErrorResponse(err, "session cookie not found")
@@ -29,6 +33,8 @@ func (h *UsersHTTPHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 	// Parse session ID
 	sessionID, err := uuid.Parse(cookie.Value)
 	if err != nil {
+		// Wrap with ErrInvalidArgument to return 400 instead of 500
+		err = fmt.Errorf("invalid session ID: %w", core_errors.ErrInvalidArgument)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "invalid session ID")
 		responseHandler.ErrorResponse(err, "invalid session ID")

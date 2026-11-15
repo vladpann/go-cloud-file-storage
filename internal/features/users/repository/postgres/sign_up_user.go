@@ -7,8 +7,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/vladpann/go-cloud-file-storage/internal/domain"
-	core_errors "github.com/vladpann/go-cloud-file-storage/internal/errors"
+	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
+	core_errors "github.com/vladpann/go-cloud-file-storage/internal/core/errors"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -35,7 +35,7 @@ func (r *UsersRepository) SignUp(
 		Insert("cloud_file_storage.users").
 		Columns("username", "password_hash").
 		Values(username, passwordHash).
-		Suffix("RETURNING id, username").
+		Suffix("RETURNING id, username, password_hash").
 		ToSql()
 	if err != nil {
 		err = fmt.Errorf("users_repository_postgres - SignUp - r.pg.Builder: %w", err)
@@ -53,6 +53,7 @@ func (r *UsersRepository) SignUp(
 	err = row.Scan(
 		&userModel.ID,
 		&userModel.Username,
+		&userModel.PasswordHash,
 	)
 	if err != nil {
 		// Check for unique constraint violation (duplicate username)

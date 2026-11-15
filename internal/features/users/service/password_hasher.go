@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	core_errors "github.com/vladpann/go-cloud-file-storage/internal/errors"
+	core_errors "github.com/vladpann/go-cloud-file-storage/internal/core/errors"
 	"golang.org/x/crypto/bcrypt"
 )
 
