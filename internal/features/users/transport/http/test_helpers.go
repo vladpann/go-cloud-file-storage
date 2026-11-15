@@ -47,12 +47,50 @@ func sendSignUpRequest(t *testing.T, handler http.Handler, req SignUpRequest) *h
 	return recorder
 }
 
+// buildSignInRequest creates a sign-in request payload with the given credentials.
+func buildSignInRequest(username, password string) SignInRequest {
+	return SignInRequest{
+		Username: username,
+		Password: password,
+	}
+}
+
+// sendSignInRequest sends HTTP POST request to sign-in endpoint and returns response.
+func sendSignInRequest(t *testing.T, handler http.Handler, req SignInRequest) *httptest.ResponseRecorder {
+	t.Helper()
+
+	body, err := json.Marshal(req)
+	require.NoError(t, err, "failed to marshal sign-up request")
+
+	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/sign-in", bytes.NewReader(body))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httpReq)
+
+	return recorder
+}
+
 // sendRawSignUpRequest sends HTTP POST request to sign-up endpoint with raw body string.
 // Used for testing malformed JSON and invalid request bodies.
 func sendRawSignUpRequest(t *testing.T, handler http.Handler, body string) *httptest.ResponseRecorder {
 	t.Helper()
 
 	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/sign-up", bytes.NewReader([]byte(body)))
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httpReq)
+
+	return recorder
+}
+
+// sendRawSignInRequest sends HTTP POST request to sign-in endpoint with raw body string.
+// Used for testing malformed JSON and invalid request bodies.
+func sendRawSignInRequest(t *testing.T, handler http.Handler, body string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/sign-in", bytes.NewReader([]byte(body)))
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	recorder := httptest.NewRecorder()
@@ -72,6 +110,17 @@ func parseSignUpResponse(t *testing.T, response *httptest.ResponseRecorder) Sign
 	require.NoError(t, err, "failed to decode sign-up response")
 
 	return signUpResponse
+}
+
+// parseSignInResponse parses JSON response body into SignInResponse struct.
+func parseSignInResponse(t *testing.T, response *httptest.ResponseRecorder) SignInResponse {
+	t.Helper()
+
+	var signInResponse SignInResponse
+	err := json.NewDecoder(response.Body).Decode(&signInResponse)
+	require.NoError(t, err, "failed to decode sign-up response")
+
+	return signInResponse
 }
 
 // extractSessionCookie extracts session cookie from HTTP response.
@@ -280,4 +329,39 @@ func prefixTestData(testID, data string) string {
 // parseUUID parses a string into a UUID and returns an error if invalid.
 func parseUUID(s string) (uuid.UUID, error) {
 	return uuid.Parse(s)
+}
+
+// Sign-Out Request Helpers
+
+// sendSignOutRequest sends HTTP POST request to sign-out endpoint with session cookie.
+func sendSignOutRequest(t *testing.T, handler http.Handler, sessionCookie *http.Cookie) *httptest.ResponseRecorder {
+	t.Helper()
+
+	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/sign-out", nil)
+	httpReq.Header.Set("Content-Type", "application/json")
+	if sessionCookie != nil {
+		httpReq.AddCookie(sessionCookie)
+	}
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httpReq)
+
+	return recorder
+}
+
+// sendSignOutRequestWithRawCookie sends HTTP POST request to sign-out endpoint with raw cookie value.
+func sendSignOutRequestWithRawCookie(t *testing.T, handler http.Handler, cookieName, cookieValue string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/sign-out", nil)
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.AddCookie(&http.Cookie{
+		Name:  cookieName,
+		Value: cookieValue,
+	})
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httpReq)
+
+	return recorder
 }

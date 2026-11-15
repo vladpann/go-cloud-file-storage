@@ -13,7 +13,8 @@ type UserModel struct {
 
 func userDomainFromModel(user UserModel) domain.User {
 	return domain.User{
-		ID:       user.ID,
-		Username: user.Username,
+		ID:           user.ID,
+		Username:     user.Username,
+		PasswordHash: user.PasswordHash,
 	}
 }
