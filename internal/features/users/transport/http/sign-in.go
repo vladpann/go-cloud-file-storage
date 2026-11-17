@@ -4,11 +4,12 @@ import (
 	"net/http"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+
 	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 	core_http_request "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/request"
 	core_http_response "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/response"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 )
 
 // SignIn handles user authentication
@@ -76,11 +77,11 @@ func (h *UsersHTTPHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	span.AddEvent("session cookie set")
 	span.SetStatus(codes.Ok, "sign in successful")
 
-	response := SignInResponse(signInResponseFromDomain(domain.User{Username: username}))
+	response := signInResponseFromDomain(domain.User{Username: username})
 
 	responseHandler.JSONResponse(response, http.StatusOK)
 }
 
-func domainFromSignInDTO(dto SignInRequest) (username string, password string) {
+func domainFromSignInDTO(dto SignInRequest) (username, password string) {
 	return dto.Username, dto.Password
 }

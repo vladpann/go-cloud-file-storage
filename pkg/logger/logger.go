@@ -37,10 +37,10 @@ type Logger struct {
 
 var _ Interface = (*Logger)(nil)
 
-func New(level string, folder string) (*Logger, error) {
+func New(level, folder string) (*Logger, error) {
 	l := parseLevel(level)
 
-	if err := os.MkdirAll(folder, 0755); err != nil {
+	if err := os.MkdirAll(folder, 0o755); err != nil {
 		return nil, fmt.Errorf("logger - New - os.MkfirAll: %w", err)
 	}
 

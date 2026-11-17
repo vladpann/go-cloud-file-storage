@@ -14,6 +14,7 @@ type (
 		Log     log
 		PG      pg
 		Redis   redis
+		MinIO   minio
 		Session session
 		Tracing tracing
 	}
@@ -40,6 +41,14 @@ type (
 	redis struct {
 		Addr     string `env:"REDIS_ADDR" envDefault:"localhost:6379"`
 		Password string `env:"REDIS_PASSWORD,required"`
+	}
+
+	minio struct {
+		Endpoint        string `env:"MINIO_ENDPOINT" envDefault:"localhost:9000"`
+		AccessKeyID     string `env:"MINIO_ROOT_USER,required"`
+		SecretAccessKey string `env:"MINIO_ROOT_PASSWORD,required"`
+		UseSSL          bool   `env:"MINIO_USE_SSL" envDefault:"false"`
+		BucketName      string `env:"MINIO_BUCKET_NAME" envDefault:"files"`
 	}
 
 	session struct {

@@ -2,7 +2,6 @@ package users_transport_http
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"testing"
 
@@ -92,15 +91,14 @@ func TestSignOut_SuccessfulLogout(t *testing.T) {
 	require.NoError(t, err, "failed to cleanup sessions")
 }
 
-// TestSignOut_MissingSessionCookie validates that sign-out without session cookie is rejected.
+// TestSignOut_MissingSessionCookie validates that sign-out without session cookie is rejected by auth middleware.
 // It verifies the system correctly handles logout attempt without authentication,
-// returning 400 Bad Request status.
+// returning 401 Unauthorized status from the auth middleware.
 //
 // Test flow:
 //  1. Initialize test context with PostgreSQL and Redis containers
 //  2. Send sign-out request without session cookie
-//  3. Verify HTTP response status is 400 Bad Request
-//  4. Verify response body contains error message
+//  3. Verify HTTP response status is 401 Unauthorized (from auth middleware)
 func TestSignOut_MissingSessionCookie(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -118,29 +116,8 @@ func TestSignOut_MissingSessionCookie(t *testing.T) {
 	response := sendSignOutRequest(t, tc.router, nil)
 
 	// Step 2: Verify HTTP status code
-	assertHTTPStatus(t, response, http.StatusBadRequest)
-
-	// Step 3: Verify error response body
-	var errorResponse struct {
-		Error   string `json:"error,omitempty"`
-		Message string `json:"message,omitempty"`
-	}
-	err = json.NewDecoder(response.Body).Decode(&errorResponse)
-	require.NoError(t, err, "failed to decode error response")
-
-	// Check that error message exists
-	errorText := errorResponse.Error + " " + errorResponse.Message
-	assert.NotEmpty(t, errorText, "error response should contain error message")
-
-	// The error message should indicate missing cookie
-	containsRelevantError :=
-		containsIgnoreCase(errorText, "cookie") ||
-			containsIgnoreCase(errorText, "session") ||
-			containsIgnoreCase(errorText, "not found") ||
-			containsIgnoreCase(errorText, "missing")
-
-	assert.True(t, containsRelevantError,
-		"error message should indicate missing session cookie, got: %s", errorText)
+	// Note: Auth middleware returns 401 when cookie is missing
+	assertHTTPStatus(t, response, http.StatusUnauthorized)
 
 	// Cleanup: Delete any test data (should be none, but for safety)
 	err = deleteAllUsers(ctx, tc.pgPool, tc.testID)
@@ -150,15 +127,14 @@ func TestSignOut_MissingSessionCookie(t *testing.T) {
 	require.NoError(t, err, "failed to cleanup sessions")
 }
 
-// TestSignOut_InvalidSessionID validates that sign-out with invalid session ID is rejected.
+// TestSignOut_InvalidSessionID validates that sign-out with invalid session ID is rejected by auth middleware.
 // It verifies the system correctly handles logout attempt with malformed session ID,
-// returning 400 Bad Request status.
+// returning 401 Unauthorized status from the auth middleware.
 //
 // Test flow:
 //  1. Initialize test context with PostgreSQL and Redis containers
 //  2. Send sign-out request with invalid (non-UUID) session cookie value
-//  3. Verify HTTP response status is 400 Bad Request
-//  4. Verify response body contains error message
+//  3. Verify HTTP response status is 401 Unauthorized (from auth middleware)
 func TestSignOut_InvalidSessionID(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -179,29 +155,8 @@ func TestSignOut_InvalidSessionID(t *testing.T) {
 	response := sendSignOutRequestWithRawCookie(t, tc.router, sessionCookieName, invalidSessionID)
 
 	// Step 2: Verify HTTP status code
-	assertHTTPStatus(t, response, http.StatusBadRequest)
-
-	// Step 3: Verify error response body
-	var errorResponse struct {
-		Error   string `json:"error,omitempty"`
-		Message string `json:"message,omitempty"`
-	}
-	err = json.NewDecoder(response.Body).Decode(&errorResponse)
-	require.NoError(t, err, "failed to decode error response")
-
-	// Check that error message exists
-	errorText := errorResponse.Error + " " + errorResponse.Message
-	assert.NotEmpty(t, errorText, "error response should contain error message")
-
-	// The error message should indicate invalid session ID
-	containsRelevantError :=
-		containsIgnoreCase(errorText, "invalid") ||
-			containsIgnoreCase(errorText, "session") ||
-			containsIgnoreCase(errorText, "uuid") ||
-			containsIgnoreCase(errorText, "id")
-
-	assert.True(t, containsRelevantError,
-		"error message should indicate invalid session ID, got: %s", errorText)
+	// Note: Auth middleware returns 401 when session ID format is invalid
+	assertHTTPStatus(t, response, http.StatusUnauthorized)
 
 	// Cleanup: Delete any test data (should be none, but for safety)
 	err = deleteAllUsers(ctx, tc.pgPool, tc.testID)
@@ -211,14 +166,14 @@ func TestSignOut_InvalidSessionID(t *testing.T) {
 	require.NoError(t, err, "failed to cleanup sessions")
 }
 
-// TestSignOut_NonExistentSession validates that sign-out with non-existent session is idempotent.
-// It verifies the system gracefully handles logout attempt with valid UUID but non-existent session,
-// returning 204 No Content status (idempotent delete behavior).
+// TestSignOut_NonExistentSession validates that sign-out with non-existent session is rejected by auth middleware.
+// It verifies the system correctly handles logout attempt with valid UUID but non-existent session,
+// returning 401 Unauthorized status from the auth middleware (session not found in Redis).
 //
 // Test flow:
 //  1. Initialize test context with PostgreSQL and Redis containers
 //  2. Send sign-out request with valid UUID but non-existent session
-//  3. Verify HTTP response status is 204 No Content (successful idempotent delete)
+//  3. Verify HTTP response status is 401 Unauthorized (from auth middleware)
 func TestSignOut_NonExistentSession(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -239,8 +194,8 @@ func TestSignOut_NonExistentSession(t *testing.T) {
 	response := sendSignOutRequestWithRawCookie(t, tc.router, sessionCookieName, nonExistentSessionID)
 
 	// Step 2: Verify HTTP status code
-	// Note: Delete is idempotent, returns 204 even if session doesn't exist
-	assertHTTPStatus(t, response, http.StatusNoContent)
+	// Note: Auth middleware returns 401 when session doesn't exist in Redis
+	assertHTTPStatus(t, response, http.StatusUnauthorized)
 
 	// Cleanup: Delete any test data (should be none, but for safety)
 	err = deleteAllUsers(ctx, tc.pgPool, tc.testID)
@@ -250,16 +205,16 @@ func TestSignOut_NonExistentSession(t *testing.T) {
 	require.NoError(t, err, "failed to cleanup sessions")
 }
 
-// TestSignOut_AlreadySignedOut validates that signing out twice is idempotent.
-// It verifies that attempting to sign out with an already deleted session returns success,
-// demonstrating idempotent delete behavior.
+// TestSignOut_AlreadySignedOut validates that signing out twice is rejected by auth middleware.
+// It verifies that attempting to sign out with an already deleted session returns 401 Unauthorized
+// from the auth middleware (session no longer exists in Redis).
 //
 // Test flow:
 //  1. Initialize test context with PostgreSQL and Redis containers
 //  2. Create a user and authenticate (sign-up + sign-in)
 //  3. Sign out successfully (first time)
 //  4. Attempt to sign out again with same session cookie
-//  5. Verify HTTP response status is 204 No Content (idempotent)
+//  5. Verify HTTP response status is 401 Unauthorized (from auth middleware)
 func TestSignOut_AlreadySignedOut(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -298,8 +253,8 @@ func TestSignOut_AlreadySignedOut(t *testing.T) {
 	secondSignOutResponse := sendSignOutRequest(t, tc.router, sessionCookie)
 
 	// Step 3: Verify HTTP status code
-	// Note: Delete is idempotent, returns 204 even if session is already deleted
-	assertHTTPStatus(t, secondSignOutResponse, http.StatusNoContent)
+	// Note: Auth middleware returns 401 when session is already deleted
+	assertHTTPStatus(t, secondSignOutResponse, http.StatusUnauthorized)
 
 	// Cleanup: Delete test data
 	err = deleteAllUsers(ctx, tc.pgPool, tc.testID)

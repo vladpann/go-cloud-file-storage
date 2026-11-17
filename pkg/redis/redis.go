@@ -28,7 +28,7 @@ type Redis struct {
 	Client *redis.Client
 }
 
-func New(addr string, password string, opts ...Option) (*Redis, error) {
+func New(addr, password string, opts ...Option) (*Redis, error) {
 	r := &Redis{
 		poolSize:     _defaultPoolSize,
 		connAttempts: _defaultConnAttempts,

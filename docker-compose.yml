@@ -10,8 +10,11 @@ x-redis-variables: &x-redis-variables
   REDIS_ADDR: redis:6379
   REDIS_PASSWORD: ${REDIS_PASSWORD}
 
-x-backend-app-environment: &x-backend-app-environment
-  # App
+x-minio-variables: &x-minio-variables
+  MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+  MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+
+x-backend-app-environment: &x-backend-app-environment # App
   APP_NAME: ${APP_NAME}
   APP_VERSION: ${APP_VERSION}
   # HTTP settings
@@ -22,6 +25,15 @@ x-backend-app-environment: &x-backend-app-environment
   # PG
   PG_POOL_MAX: ${PG_POOL_MAX}
   PG_URL: ${PG_URL}
+  # Redis
+  REDIS_ADDR: redis:6379
+  REDIS_PASSWORD: ${REDIS_PASSWORD}
+  # MinIO
+  MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+  MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+  MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+  MINIO_USE_SSL: ${MINIO_USE_SSL}
+  MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
   # Session
   SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE}
   SESSION_TTL: ${SESSION_TTL}
@@ -40,7 +52,7 @@ services:
     volumes:
       - db_data:/var/lib/postgresql
     ports:
-      - "5432:5432"
+      - '5432:5432'
     networks:
       app_network:
         aliases:
@@ -49,15 +61,15 @@ services:
   redis:
     container_name: redis
     image: redis:7-alpine
-    command: [ "redis-server", "--requirepass", "${REDIS_PASSWORD}" ]
+    command: ['redis-server', '--requirepass', '${REDIS_PASSWORD}']
     environment:
       <<: *x-redis-variables
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis_data:/data
     healthcheck:
-      test: [ "CMD", "redis-cli -a $$REDIS_PASSWORD ping | grep PONG" ]
+      test: ['CMD', 'redis-cli -a $$REDIS_PASSWORD ping | grep PONG']
       interval: 5s
       timeout: 3s
       retries: 5
@@ -66,14 +78,30 @@ services:
         aliases:
           - redis.lvh.me
 
+  minio:
+    container_name: minio
+    image: cgr.dev/chainguard/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      <<: *x-minio-variables
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio_data:/data
+    networks:
+      app_network:
+        aliases:
+          - minio.lvh.me
+
   jaeger:
     container_name: jaeger
     image: jaegertracing/all-in-one:1.76.0
     ports:
-      - "16686:16686"   # Jaeger UI
-      - "4317:4317"     # OTLP gRPC
-      - "4318:4318"     # OTLP HTTP
-      - "6831:6831/udp" # Jaeger agent UDP
+      - '16686:16686' # Jaeger UI
+      - '4317:4317' # OTLP gRPC
+      - '4318:4318' # OTLP HTTP
+      - '6831:6831/udp' # Jaeger agent UDP
     networks:
       app_network:
         aliases:
@@ -82,14 +110,14 @@ services:
   app:
     container_name: app
     platform: linux/amd64
-    pid: "host"
+    pid: 'host'
     build:
       context: .
     environment:
       <<: *x-backend-app-environment
     ports:
-      - "8080:8080"
-      - "8081:8081"
+      - '8080:8080'
+      - '8081:8081'
     depends_on:
       - db
       - jaeger
@@ -106,12 +134,11 @@ services:
         aliases:
           - app.lvh.me
 
-
 networks:
   app_network:
     external: false
 
-
 volumes:
   db_data:
   redis_data:
+  minio_data:

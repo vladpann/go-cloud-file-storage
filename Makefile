@@ -19,7 +19,7 @@ help: ## Display this help screen
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 compose-up: ### Run docker compose (without backend and reverse proxy)
-	@$(BASE_STACK) up --build -d db redis jaeger
+	@$(BASE_STACK) up --build -d db redis minio jaeger
 .PHONY: compose-up
 
 compose-up-all: ### Run docker compose (with backend and reverse proxy)
@@ -35,6 +35,7 @@ deps: ### deps tidy + verify
 .PHONY: deps
 
 deps-audit: ### check dependencies vulnerabilities
+	@command -v govulncheck >/dev/null 2>&1 || { echo "govulncheck not found. Installing..."; go install golang.org/x/vuln/cmd/govulncheck@latest; }
 	@govulncheck ./...
 .PHONY: deps-audit
 
@@ -42,10 +43,14 @@ fix-diff: ### Show code changes by `go fix`
 	@go fix -diff ./...
 .PHONY: fix-diff
 
+MODULE ?= github.com/vladpann/go-cloud-file-storage
+
 format: ### Run code formatter
+	@command -v gofumpt >/dev/null 2>&1 || { echo "gofumpt not found. Installing..."; go install mvdan.cc/gofumpt@latest; }
+	@command -v gci >/dev/null 2>&1 || { echo "gci not found. Installing..."; go install github.com/daixiang0/gci@latest; }
 	@go fix ./...
 	@gofumpt -l -w .
-	@gci write . --skip-generated -s standard -s default
+	@gci write . --skip-generated -s standard -s default -s $(MODULE)
 .PHONY: format
 
 run: deps
@@ -63,6 +68,7 @@ docker-rm-volume: ### remove docker volume
 .PHONY: docker-rm-volume
 
 linter-golangci: ### check by golangci linter
+	@command -v golangci-lint >/dev/null 2>&1 || { echo "golangci-lint not found. Installing..."; go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; }
 	@golangci-lint run
 .PHONY: linter-golangci
 
@@ -78,6 +84,7 @@ test: ### run test and generate HTML coverage report
 	@go test -v -race -covermode atomic -coverprofile=coverage.out ./internal/... ./pkg/...
 	@go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
+	@rm coverage.out
 .PHONY: test
 
 MIGRATIONS_DIR ?= migrations
@@ -112,8 +119,13 @@ migrate-status: ## migration status
 .PHONY: migrate-status
 
 bin-deps: ### install tools
-	@go install tool
+	@echo "Installing development tools..."
 	@go install -tags 'postgres' github.com/pressly/goose/v3/cmd/goose@v3.29.0
+	@go install mvdan.cc/gofumpt@latest
+	@go install github.com/daixiang0/gci@latest
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@go install golang.org/x/vuln/cmd/govulncheck@latest
+	@echo "✓ All tools installed successfully"
 .PHONY: bin-deps
 
 pre-commit: deps format linter-golangci test ### run pre-commit

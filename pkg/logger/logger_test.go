@@ -52,7 +52,6 @@ func TestNewSetsLoggerLevel(t *testing.T) {
 	tmpDir := os.TempDir()
 	for _, tc := range cases {
 		l, err := New(tc.in, tmpDir)
-
 		if err != nil {
 			t.Fatalf("New(%q, %q) returned error: %v", tc.in, tmpDir, err)
 		}

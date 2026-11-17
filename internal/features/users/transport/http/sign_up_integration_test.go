@@ -280,7 +280,7 @@ func toLower(s string) string {
 	for i := 0; i < len(s); i++ {
 		c := s[i]
 		if c >= 'A' && c <= 'Z' {
-			c = c + ('a' - 'A')
+			c += ('a' - 'A')
 		}
 		result[i] = c
 	}
@@ -289,7 +289,7 @@ func toLower(s string) string {
 
 // contains checks if a string contains a substring.
 func contains(s, substr string) bool {
-	return len(substr) == 0 || indexOfSubstring(s, substr) >= 0
+	return substr == "" || indexOfSubstring(s, substr) >= 0
 }
 
 // indexOfSubstring returns the index of the first instance of substr in s, or -1 if not present.
@@ -528,13 +528,13 @@ func TestSignUp_InvalidRequest_ShortPassword(t *testing.T) {
 		{"4 characters", "abcd"},
 	}
 
-	for _, tc_pass := range testCases {
-		t.Run(tc_pass.name, func(t *testing.T) {
+	for _, tcPass := range testCases {
+		t.Run(tcPass.name, func(t *testing.T) {
 			// Test data - short password
 			baseUsername := "testuser"
 			username := prefixTestData(tc.testID, baseUsername)
-			password := tc_pass.password
-			repeatPassword := tc_pass.password
+			password := tcPass.password
+			repeatPassword := tcPass.password
 
 			// Count users and sessions before request
 			userLCountBefore, err := countUsers(ctx, tc.pgPool, tc.testID)
@@ -1159,8 +1159,8 @@ func TestSignUp_InvalidRequest_MalformedJSON(t *testing.T) {
 		},
 	}
 
-	for _, tc_json := range testCases {
-		t.Run(tc_json.name, func(t *testing.T) {
+	for _, tcJSON := range testCases {
+		t.Run(tcJSON.name, func(t *testing.T) {
 			// Count users and sessions before request
 			userLCountBefore, err := countUsers(ctx, tc.pgPool, tc.testID)
 			require.NoError(t, err, "failed to count users before request")
@@ -1169,7 +1169,7 @@ func TestSignUp_InvalidRequest_MalformedJSON(t *testing.T) {
 			require.NoError(t, err, "failed to count sessions before request")
 
 			// Step 1: Send sign-up request with malformed JSON
-			response := sendRawSignUpRequest(t, tc.router, tc_json.body)
+			response := sendRawSignUpRequest(t, tc.router, tcJSON.body)
 
 			// Step 2: Verify HTTP status code
 			assertHTTPStatus(t, response, http.StatusBadRequest)
@@ -1260,7 +1260,7 @@ func TestSignUp_ParallelIsolation(t *testing.T) {
 	results := make(chan testResult, numConcurrentTests)
 
 	// Launch multiple concurrent test contexts
-	for i := 0; i < numConcurrentTests; i++ {
+	for i := range numConcurrentTests {
 		go func(index int) {
 			ctx := context.Background()
 
@@ -1388,7 +1388,7 @@ func TestSignUp_ParallelIsolation(t *testing.T) {
 	usernames := make(map[string]bool)
 	userIDs := make(map[uuid.UUID]bool)
 
-	for i := 0; i < numConcurrentTests; i++ {
+	for range numConcurrentTests {
 		result := <-results
 		if result.err != nil {
 			t.Errorf("Concurrent test failed: %v", result.err)

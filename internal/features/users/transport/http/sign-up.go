@@ -4,12 +4,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
-	core_http_request "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/request"
-	core_http_response "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/response"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+
+	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
+	core_http_request "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/request"
+	core_http_response "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/response"
 )
 
 var tracer = otel.Tracer("github.com/vladpann/go-cloud-file-storage/internal/features/users/transport/http")
@@ -83,11 +84,11 @@ func (h *UsersHTTPHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	span.AddEvent("session cookie set")
 	span.SetStatus(codes.Ok, "user created and logged in successfully")
 
-	response := SignUpResponse(signUpResponseFromDomain(domain.User{Username: username}))
+	response := signUpResponseFromDomain(domain.User{Username: username})
 
 	responseHandler.JSONResponse(response, http.StatusCreated)
 }
 
-func domainFromSignUpDTO(dto SignUpRequest) (username string, password string, repeatPassword string) {
+func domainFromSignUpDTO(dto SignUpRequest) (username, password, repeatPassword string) {
 	return dto.Username, dto.Password, dto.RepeatPassword
 }

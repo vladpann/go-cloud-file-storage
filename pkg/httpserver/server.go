@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
 )
 
 const (
