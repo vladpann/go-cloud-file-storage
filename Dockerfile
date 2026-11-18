@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.26-alpine AS builder
+FROM golang:1.26.11-alpine AS builder
 
 # Allow Go toolchain auto-download
 ENV GOTOOLCHAIN=auto
