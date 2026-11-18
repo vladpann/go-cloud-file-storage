@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+
 	"github.com/vladpann/go-cloud-file-storage/config"
 	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 )
@@ -31,11 +32,11 @@ type SessionsRepository interface {
 }
 
 func New(
-	config *config.Config,
+	cfg *config.Config,
 	sessionsRepository SessionsRepository,
 ) *SessionsService {
 	return &SessionsService{
-		config:             config,
+		config:             cfg,
 		sessionsRepository: sessionsRepository,
 	}
 }

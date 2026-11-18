@@ -332,13 +332,17 @@ func (tc *TestContext) startPostgreSQLContainer(ctx context.Context) (testcontai
 
 	host, err := container.Host(ctx)
 	if err != nil {
-		container.Terminate(ctx)
+		if termErr := container.Terminate(ctx); termErr != nil {
+			err = errors.Join(err, termErr)
+		}
 		return nil, "", fmt.Errorf("failed to get PostgreSQL host: %w", err)
 	}
 
 	port, err := container.MappedPort(ctx, "5432")
 	if err != nil {
-		container.Terminate(ctx)
+		if termErr := container.Terminate(ctx); termErr != nil {
+			err = errors.Join(err, termErr)
+		}
 		return nil, "", fmt.Errorf("failed to get PostgreSQL port: %w", err)
 	}
 
@@ -356,11 +360,11 @@ func (tc *TestContext) startPostgreSQLContainer(ctx context.Context) (testcontai
 // address, and password. The container uses redis:7-alpine image with test password.
 // Wait strategy: waits for "Ready to accept connections" log message.
 // Timeout: 30 seconds.
-func (tc *TestContext) startRedisContainer(ctx context.Context) (testcontainers.Container, string, string, error) {
+func (tc *TestContext) startRedisContainer(ctx context.Context) (container testcontainers.Container, addr, password string, err error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	password := "testpass"
+	password = "testpass"
 	req := testcontainers.ContainerRequest{
 		Image:        "redis:7-alpine",
 		ExposedPorts: []string{"6379/tcp"},
@@ -369,7 +373,7 @@ func (tc *TestContext) startRedisContainer(ctx context.Context) (testcontainers.
 			WithStartupTimeout(30 * time.Second),
 	}
 
-	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+	container, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
 		Started:          true,
 	})
@@ -379,17 +383,21 @@ func (tc *TestContext) startRedisContainer(ctx context.Context) (testcontainers.
 
 	host, err := container.Host(ctx)
 	if err != nil {
-		container.Terminate(ctx)
+		if termErr := container.Terminate(ctx); termErr != nil {
+			err = errors.Join(err, termErr)
+		}
 		return nil, "", "", fmt.Errorf("failed to get Redis host: %w", err)
 	}
 
 	port, err := container.MappedPort(ctx, "6379")
 	if err != nil {
-		container.Terminate(ctx)
+		if termErr := container.Terminate(ctx); termErr != nil {
+			err = errors.Join(err, termErr)
+		}
 		return nil, "", "", fmt.Errorf("failed to get Redis port: %w", err)
 	}
 
-	addr := fmt.Sprintf("%s:%s", host, port.Port())
+	addr = fmt.Sprintf("%s:%s", host, port.Port())
 	return container, addr, password, nil
 }
 
@@ -408,8 +416,7 @@ func getMigrationsPath() (string, error) {
 	// Current location: internal/features/users/transport/http/test_context.go
 	// Navigate up 5 levels to reach project root
 	testDir := filepath.Dir(filename)
-	projectRoot := filepath.Join(testDir, "../../../../..")
-	migrationsPath := filepath.Join(projectRoot, "migrations")
+	migrationsPath := filepath.Join(testDir, "..", "..", "..", "..", "..", "migrations")
 
 	// Clean the path to resolve .. components
 	migrationsPath = filepath.Clean(migrationsPath)
@@ -438,7 +445,7 @@ func getMigrationsPath() (string, error) {
 //   - Migrations directory cannot be located
 //   - Database connection fails
 //   - Migration application fails
-func (tc *TestContext) applyMigrations(ctx context.Context, databaseURL string) error {
+func (tc *TestContext) applyMigrations(_ context.Context, databaseURL string) error {
 	// Locate migrations directory
 	migrationsPath, err := getMigrationsPath()
 	if err != nil {
@@ -455,7 +462,11 @@ func (tc *TestContext) applyMigrations(ctx context.Context, databaseURL string) 
 	if err != nil {
 		return fmt.Errorf("failed to open database connection: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close database connection: %w", closeErr))
+		}
+	}()
 
 	// Apply all up migrations
 	if err := goose.Up(db, migrationsPath); err != nil {
@@ -482,19 +493,24 @@ func generateTestID() string {
 }
 
 // setupTestRouter creates a chi router with test routes registered.
-// It mirrors the production routing structure but without middleware overhead.
+// It mirrors the production routing structure with middleware.
 // Routes registered:
-//   - POST /api/v1/sign-up
-//   - POST /api/v1/sign-in
-//   - POST /api/v1/sign-out
+//   - POST /api/v1/auth/sign-up (public)
+//   - POST /api/v1/auth/sign-in (public)
+//   - POST /api/v1/auth/sign-out (protected)
 func (tc *TestContext) setupTestRouter() http.Handler {
 	r := chi.NewRouter()
 
-	// Register API v1 routes without middleware for simpler testing
+	// Register API v1 routes to match production structure
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Post("/sign-up", tc.httpHandler.SignUp)
-		r.Post("/sign-in", tc.httpHandler.SignIn)
-		r.Post("/sign-out", tc.httpHandler.SignOut)
+		r.Route("/auth", func(r chi.Router) {
+			// Public routes
+			r.Post("/sign-up", tc.httpHandler.SignUp)
+			r.Post("/sign-in", tc.httpHandler.SignIn)
+
+			// Protected route with auth middleware
+			r.With(tc.httpHandler.AuthMiddleware()).Post("/sign-out", tc.httpHandler.SignOut)
+		})
 	})
 
 	return r

@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/google/uuid"
-	core_errors "github.com/vladpann/go-cloud-file-storage/internal/core/errors"
-	core_http_response "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/response"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+
+	core_errors "github.com/vladpann/go-cloud-file-storage/internal/core/errors"
+	core_http_middleware "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/middleware"
+	core_http_response "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/response"
 )
 
 // SignOut handles user logout by deleting the session
@@ -19,22 +20,11 @@ func (h *UsersHTTPHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 
 	responseHandler := core_http_response.NewHTTPResponseHandler(h.l, w)
 
-	// Get session cookie
-	cookie, err := r.Cookie(sessionCookieName)
-	if err != nil {
+	// Get session ID
+	sessionID, ok := core_http_middleware.GetSessionIDFromContext(ctx)
+	if !ok {
 		// Wrap with ErrInvalidArgument to return 400 instead of 500
-		err = fmt.Errorf("session cookie not found: %w", core_errors.ErrInvalidArgument)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "session cookie not found")
-		responseHandler.ErrorResponse(err, "session cookie not found")
-		return
-	}
-
-	// Parse session ID
-	sessionID, err := uuid.Parse(cookie.Value)
-	if err != nil {
-		// Wrap with ErrInvalidArgument to return 400 instead of 500
-		err = fmt.Errorf("invalid session ID: %w", core_errors.ErrInvalidArgument)
+		err := fmt.Errorf("invalid session ID: %w", core_errors.ErrInvalidArgument)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "invalid session ID")
 		responseHandler.ErrorResponse(err, "invalid session ID")
@@ -54,7 +44,7 @@ func (h *UsersHTTPHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 	span.AddEvent("session deleted")
 
 	// Clear session cookie
-	clearCookie := &http.Cookie{
+	clearCookie := &http.Cookie{ //nolint:gosec // Secure is configurable via SESSION_COOKIE_SECURE (false only for local dev)
 		Name:     sessionCookieName,
 		Value:    "",
 		Path:     "/",

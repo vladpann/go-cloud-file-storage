@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	RequestIDHeader     = "X-Request-ID"
-	RequestIDContextKey = "request_id"
+	RequestIDHeader                = "X-Request-ID"
+	requestIDContextKey contextKey = "request_id"
 )
 
 // RequestID middleware adds a unique request ID to each request
@@ -26,9 +26,9 @@ func RequestID() func(next http.Handler) http.Handler {
 
 			w.Header().Set(RequestIDHeader, requestID)
 
-			ctx := context.WithValue(r.Context(), RequestIDContextKey, requestID)
+			ctx := context.WithValue(r.Context(), requestIDContextKey, requestID)
 
-			logger := zerolog.Ctx(ctx).With().Str(RequestIDContextKey, requestID).Logger()
+			logger := zerolog.Ctx(ctx).With().Str("request_id", requestID).Logger()
 			ctx = logger.WithContext(ctx)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -38,7 +38,7 @@ func RequestID() func(next http.Handler) http.Handler {
 
 // GetRequestID retrieves the request ID from context
 func GetRequestID(ctx context.Context) string {
-	if reqID, ok := ctx.Value(RequestIDContextKey).(string); ok {
+	if reqID, ok := ctx.Value(requestIDContextKey).(string); ok {
 		return reqID
 	}
 	return ""

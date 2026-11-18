@@ -2,6 +2,7 @@ package core_http_v1
 
 import (
 	"github.com/go-playground/validator/v10"
+
 	users_transport_http "github.com/vladpann/go-cloud-file-storage/internal/features/users/transport/http"
 	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
 )
