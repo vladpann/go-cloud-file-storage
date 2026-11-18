@@ -152,6 +152,10 @@ jobs:
           fetch-depth: 0
 
       - name: Check PR size
+        permissions:
+          contents: read
+          issues: write
+          pull-requests: write
         run: |
           LINES_CHANGED=$(git diff --shortstat origin/${{ github.base_ref }} | awk '{print $4+$6}')
           echo "Lines changed: $LINES_CHANGED"
