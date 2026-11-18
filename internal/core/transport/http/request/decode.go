@@ -123,7 +123,7 @@ func validateStruct(dest any, v *validator.Validate) error {
 func formatValidationError(err error) error {
 	var validationErrs validator.ValidationErrors
 	if errors.As(err, &validationErrs) {
-		var errMessages []string
+		errMessages := make([]string, 0, len(validationErrs))
 		for _, fieldErr := range validationErrs {
 			errMessages = append(errMessages, formatFieldError(fieldErr))
 		}

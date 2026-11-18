@@ -462,7 +462,11 @@ func (tc *TestContext) applyMigrations(_ context.Context, databaseURL string) er
 	if err != nil {
 		return fmt.Errorf("failed to open database connection: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to close database connection: %w", closeErr))
+		}
+	}()
 
 	// Apply all up migrations
 	if err := goose.Up(db, migrationsPath); err != nil {

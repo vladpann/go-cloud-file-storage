@@ -81,7 +81,7 @@ linters:
     generated: lax
     rules:
       # Exclude some linters from running on tests files
-      - path: _test\.go
+      - path: (_test\.go|test_helpers\.go|test_context\.go|internal/testutil/)
         linters:
           - gocyclo
           - errcheck
@@ -129,5 +129,3 @@ output:
       print-linter-name: true
       print-issued-lines: true
       colors: true
-  sort-order:
-    - file

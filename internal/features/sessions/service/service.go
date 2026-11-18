@@ -32,11 +32,11 @@ type SessionsRepository interface {
 }
 
 func New(
-	config *config.Config,
+	cfg *config.Config,
 	sessionsRepository SessionsRepository,
 ) *SessionsService {
 	return &SessionsService{
-		config:             config,
+		config:             cfg,
 		sessionsRepository: sessionsRepository,
 	}
 }

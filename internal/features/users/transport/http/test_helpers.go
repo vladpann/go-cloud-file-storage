@@ -38,7 +38,7 @@ func sendSignUpRequest(t *testing.T, handler http.Handler, req SignUpRequest) *h
 	body, err := json.Marshal(req)
 	require.NoError(t, err, "failed to marshal sign-up request")
 
-	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/sign-up", bytes.NewReader(body))
+	httpReq := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/auth/sign-up", bytes.NewReader(body))
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	recorder := httptest.NewRecorder()
@@ -62,7 +62,7 @@ func sendSignInRequest(t *testing.T, handler http.Handler, req SignInRequest) *h
 	body, err := json.Marshal(req)
 	require.NoError(t, err, "failed to marshal sign-up request")
 
-	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/sign-in", bytes.NewReader(body))
+	httpReq := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/auth/sign-in", bytes.NewReader(body))
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	recorder := httptest.NewRecorder()
@@ -76,7 +76,7 @@ func sendSignInRequest(t *testing.T, handler http.Handler, req SignInRequest) *h
 func sendRawSignUpRequest(t *testing.T, handler http.Handler, body string) *httptest.ResponseRecorder {
 	t.Helper()
 
-	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/sign-up", bytes.NewReader([]byte(body)))
+	httpReq := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/auth/sign-up", bytes.NewReader([]byte(body)))
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	recorder := httptest.NewRecorder()
@@ -90,7 +90,7 @@ func sendRawSignUpRequest(t *testing.T, handler http.Handler, body string) *http
 func sendRawSignInRequest(t *testing.T, handler http.Handler, body string) *httptest.ResponseRecorder {
 	t.Helper()
 
-	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/sign-in", bytes.NewReader([]byte(body)))
+	httpReq := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/auth/sign-in", bytes.NewReader([]byte(body)))
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	recorder := httptest.NewRecorder()
@@ -323,7 +323,7 @@ func parseUUID(s string) (uuid.UUID, error) {
 func sendSignOutRequest(t *testing.T, handler http.Handler, sessionCookie *http.Cookie) *httptest.ResponseRecorder {
 	t.Helper()
 
-	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/sign-out", http.NoBody)
+	httpReq := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/auth/sign-out", http.NoBody)
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	if sessionCookie != nil {
@@ -348,7 +348,7 @@ func sendSignOutRequest(t *testing.T, handler http.Handler, sessionCookie *http.
 func sendSignOutRequestWithRawCookie(t *testing.T, handler http.Handler, cookieName, cookieValue string) *httptest.ResponseRecorder {
 	t.Helper()
 
-	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/sign-out", http.NoBody)
+	httpReq := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/auth/sign-out", http.NoBody)
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.AddCookie(&http.Cookie{
 		Name:  cookieName,

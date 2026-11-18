@@ -44,7 +44,7 @@ func (h *UsersHTTPHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 	span.AddEvent("session deleted")
 
 	// Clear session cookie
-	clearCookie := &http.Cookie{
+	clearCookie := &http.Cookie{ //nolint:gosec // Secure is configurable via SESSION_COOKIE_SECURE (false only for local dev)
 		Name:     sessionCookieName,
 		Value:    "",
 		Path:     "/",

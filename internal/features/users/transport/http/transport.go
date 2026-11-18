@@ -52,17 +52,17 @@ func NewUsersHTTPHandler(
 	usersService UsersService,
 	sessionsService SessionsService,
 	authMiddleware core_http_middleware.Middleware,
-	config *config.Config,
+	cfg *config.Config,
 	l logger.Interface,
-	validator *validator.Validate,
+	v *validator.Validate,
 ) *UsersHTTPHandler {
 	return &UsersHTTPHandler{
 		usersService:    usersService,
 		sessionsService: sessionsService,
 		authMiddleware:  authMiddleware,
-		config:          config,
+		config:          cfg,
 		l:               l,
-		validator:       validator,
+		validator:       v,
 	}
 }
 

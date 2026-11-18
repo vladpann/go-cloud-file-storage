@@ -63,7 +63,7 @@ func (h *UsersHTTPHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	span.AddEvent("session created")
 
 	// Set session cookie
-	cookie := &http.Cookie{
+	cookie := &http.Cookie{ //nolint:gosec // Secure is configurable via SESSION_COOKIE_SECURE (false only for local dev)
 		Name:     sessionCookieName,
 		Value:    session.ID.String(),
 		Path:     "/",
