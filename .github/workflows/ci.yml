@@ -8,6 +8,8 @@ on:
 
 permissions:
   contents: read
+  issue: write
+  pull-request: write
 
 env:
   GO_VERSION: '1.26'
@@ -143,6 +145,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      issues: write
+      pull-requests: write
       actions: read
       security-events: write
     steps:
@@ -156,7 +160,7 @@ jobs:
           cache: true
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           scan-ref: '.'
