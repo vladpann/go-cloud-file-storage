@@ -28,7 +28,7 @@ type Redis struct {
 	Client *redis.Client
 }
 
-func New(addr string, password string, opts ...Option) (*Redis, error) {
+func New(addr, password string, opts ...Option) (*Redis, error) {
 	r := &Redis{
 		poolSize:     _defaultPoolSize,
 		connAttempts: _defaultConnAttempts,
@@ -47,7 +47,7 @@ func New(addr string, password string, opts ...Option) (*Redis, error) {
 	})
 
 	if err := redisotel.InstrumentTracing(r.Client); err != nil {
-		r.Client.Close()
+		_ = r.Client.Close() //nolint:errcheck // initial error is more important
 
 		return nil, fmt.Errorf("redis - New - redisotel.InstrumentTracing: %w", err)
 	}
@@ -72,7 +72,7 @@ func New(addr string, password string, opts ...Option) (*Redis, error) {
 	}
 
 	if err != nil {
-		r.Client.Close()
+		_ = r.Client.Close() //nolint:errcheck // initial error is more important
 
 		return nil, fmt.Errorf("redis - New - connAttempts == 0: %w", err)
 	}
@@ -81,7 +81,5 @@ func New(addr string, password string, opts ...Option) (*Redis, error) {
 }
 
 func (r *Redis) Close() {
-	if r.Client != nil {
-		r.Client.Close()
-	}
+	_ = r.Client.Close() //nolint:errcheck // initial error is more important
 }

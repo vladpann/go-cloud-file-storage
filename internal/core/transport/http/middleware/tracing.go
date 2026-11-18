@@ -38,7 +38,7 @@ func TracingSpanName() func(http.Handler) http.Handler {
 			// Add request_id to the span if available
 			if requestID := GetRequestID(r.Context()); requestID != "" {
 				span := trace.SpanFromContext(r.Context())
-				span.SetAttributes(attribute.String(RequestIDContextKey, requestID))
+				span.SetAttributes(attribute.String(string(requestIDContextKey), requestID))
 			}
 
 			next.ServeHTTP(w, r)

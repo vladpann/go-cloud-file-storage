@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/go-playground/validator/v10"
+
 	"github.com/vladpann/go-cloud-file-storage/config"
 	core_http "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http"
 	core_http_middleware "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/middleware"
@@ -20,6 +21,7 @@ import (
 	users_transport_http "github.com/vladpann/go-cloud-file-storage/internal/features/users/transport/http"
 	"github.com/vladpann/go-cloud-file-storage/pkg/httpserver"
 	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
+	"github.com/vladpann/go-cloud-file-storage/pkg/minio"
 	"github.com/vladpann/go-cloud-file-storage/pkg/postgres"
 	"github.com/vladpann/go-cloud-file-storage/pkg/redis"
 	"github.com/vladpann/go-cloud-file-storage/pkg/tracing"
@@ -144,6 +146,19 @@ func Run(cfg *config.Config) {
 		l.Fatal(fmt.Errorf("app - Run - redis.New: %w", err))
 	}
 	defer rdb.Close()
+
+	// MinIO
+	minioClient, err := minio.New(ctx, minio.Config{
+		Endpoint:        cfg.MinIO.Endpoint,
+		AccessKeyID:     cfg.MinIO.AccessKeyID,
+		SecretAccessKey: cfg.MinIO.SecretAccessKey,
+		UseSSL:          cfg.MinIO.UseSSL,
+		BucketName:      cfg.MinIO.BucketName,
+	})
+	if err != nil {
+		l.Fatal(fmt.Errorf("app - Run - minio.New: %w", err))
+	}
+	l.Info("MinIO client initialized, bucket: %s", minioClient.BucketName())
 
 	f := initFeatures(cfg, pg, rdb)
 	v1HTTPHandlers := initV1HTTPHandlers(cfg, f, l)

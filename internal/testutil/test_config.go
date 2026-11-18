@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/vladpann/go-cloud-file-storage/config"
@@ -18,31 +19,30 @@ import (
 //   - Connection pool: 5 connections (smaller than production)
 //   - Cookie secure: true (can be overridden per test if needed)
 func NewTestConfig(postgresURL, redisAddr, redisPassword string) *config.Config {
-	// Note: We cannot directly construct config.Config because the inner structs
-	// (app, http, log, pg, redis, session, tracing) are unexported.
-	// We need to use environment variables and parse the config.
-	// However, for testing we want to avoid environment variable dependencies.
-	// We'll need to construct this differently or use a custom test config type.
+	env := map[string]string{
+		"APP_NAME":              "test-app",
+		"APP_VERSION":           "test",
+		"HTTP_PORT":             "0",
+		"LOG_LEVEL":             "debug",
+		"LOG_FOLDER":            os.TempDir(),
+		"PG_POOL_MAX":           "5",
+		"PG_URL":                postgresURL,
+		"REDIS_ADDR":            redisAddr,
+		"REDIS_PASSWORD":        redisPassword,
+		"SESSION_TTL":           "24h",
+		"SESSION_COOKIE_SECURE": "true",
+		"TRACING_ENABLED":       "false",
+	}
 
-	// Set required environment variables
-	os.Setenv("APP_NAME", "test-app")
-	os.Setenv("APP_VERSION", "test")
-	os.Setenv("HTTP_PORT", "0")
-	os.Setenv("LOG_LEVEL", "debug")
-	os.Setenv("LOG_FOLDER", os.TempDir())
-	os.Setenv("PG_POOL_MAX", "5")
-	os.Setenv("PG_URL", postgresURL)
-	os.Setenv("REDIS_ADDR", redisAddr)
-	os.Setenv("REDIS_PASSWORD", redisPassword)
-	os.Setenv("SESSION_TTL", "24h")
-	os.Setenv("SESSION_COOKIE_SECURE", "true")
-	os.Setenv("TRACING_ENABLED", "false")
+	for key, value := range env {
+		if err := os.Setenv(key, value); err != nil {
+			// Fail fast: this is test setup.
+			panic(fmt.Sprintf("failed to set env %s: %v", key, err))
+		}
+	}
 
-	// Parse config from environment
 	cfg, err := config.NewConfig()
 	if err != nil {
-		// This shouldn't fail with valid values, but if it does, panic since
-		// we're in test setup and should fail fast
 		panic("failed to create test config: " + err.Error())
 	}
 

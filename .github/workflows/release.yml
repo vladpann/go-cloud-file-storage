@@ -1,0 +1,140 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  GO_VERSION: '1.26'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Get version from tag
+        id: version
+        run: |
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          echo "VERSION_NUMBER=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 ${{ github.ref }}^ 2>/dev/null || echo "")
+
+          if [ -z "$PREV_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %s (%h)" ${{ github.ref }})
+          else
+            COMMITS=$(git log --pretty=format:"- %s (%h)" $PREV_TAG..${{ github.ref }})
+          fi
+
+          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Build binaries
+        run: |
+          mkdir -p dist
+
+          # Build for different platforms
+          GOOS=linux GOARCH=amd64 go build -o dist/go-cloud-file-storage-linux-amd64 -ldflags="-s -w -X main.version=${{ steps.version.outputs.VERSION }}" ./cmd/app
+          GOOS=linux GOARCH=arm64 go build -o dist/go-cloud-file-storage-linux-arm64 -ldflags="-s -w -X main.version=${{ steps.version.outputs.VERSION }}" ./cmd/app
+          GOOS=darwin GOARCH=amd64 go build -o dist/go-cloud-file-storage-darwin-amd64 -ldflags="-s -w -X main.version=${{ steps.version.outputs.VERSION }}" ./cmd/app
+          GOOS=darwin GOARCH=arm64 go build -o dist/go-cloud-file-storage-darwin-arm64 -ldflags="-s -w -X main.version=${{ steps.version.outputs.VERSION }}" ./cmd/app
+          GOOS=windows GOARCH=amd64 go build -o dist/go-cloud-file-storage-windows-amd64.exe -ldflags="-s -w -X main.version=${{ steps.version.outputs.VERSION }}" ./cmd/app
+
+          # Create checksums
+          cd dist
+          sha256sum * > checksums.txt
+          cd ..
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## What's Changed
+
+            ${{ steps.changelog.outputs.CHANGELOG }}
+
+            ## Docker Images
+
+            ```bash
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION_NUMBER }}
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ```
+
+            ## Installation
+
+            ### Binary
+            Download the appropriate binary for your platform from the assets below.
+
+            ### Docker
+            ```bash
+            docker run -d \
+              --name go-cloud-file-storage \
+              -p 8080:8080 \
+              -e PG_URL="your-postgres-url" \
+              -e REDIS_PASSWORD="your-redis-password" \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION_NUMBER }}
+            ```
+          files: |
+            dist/*
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.VERSION, 'alpha') || contains(steps.version.outputs.VERSION, 'beta') || contains(steps.version.outputs.VERSION, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-production:
+    name: Deploy to Production
+    needs: create-release
+    runs-on: ubuntu-latest
+    if: "!contains(github.ref, 'alpha') && !contains(github.ref, 'beta') && !contains(github.ref, 'rc')"
+    environment:
+      name: production
+      url: https://your-production-url.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy notification
+        run: |
+          echo "🚀 Deploying version ${GITHUB_REF#refs/tags/} to production"
+          # Add your deployment steps here
+          # For example:
+          # - SSH to server
+          # - Pull new Docker image
+          # - Restart containers
+          # - Run health checks
+
+      # Example deployment with Docker
+      # - name: Deploy to production server
+      #   uses: appleboy/ssh-action@master
+      #   with:
+      #     host: ${{ secrets.PRODUCTION_HOST }}
+      #     username: ${{ secrets.PRODUCTION_USER }}
+      #     key: ${{ secrets.PRODUCTION_SSH_KEY }}
+      #     script: |
+      #       cd /opt/go-cloud-file-storage
+      #       docker compose pull
+      #       docker compose up -d
+      #       docker compose ps

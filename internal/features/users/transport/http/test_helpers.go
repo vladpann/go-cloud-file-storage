@@ -38,7 +38,7 @@ func sendSignUpRequest(t *testing.T, handler http.Handler, req SignUpRequest) *h
 	body, err := json.Marshal(req)
 	require.NoError(t, err, "failed to marshal sign-up request")
 
-	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/sign-up", bytes.NewReader(body))
+	httpReq := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/auth/sign-up", bytes.NewReader(body))
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	recorder := httptest.NewRecorder()
@@ -62,7 +62,7 @@ func sendSignInRequest(t *testing.T, handler http.Handler, req SignInRequest) *h
 	body, err := json.Marshal(req)
 	require.NoError(t, err, "failed to marshal sign-up request")
 
-	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/sign-in", bytes.NewReader(body))
+	httpReq := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/auth/sign-in", bytes.NewReader(body))
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	recorder := httptest.NewRecorder()
@@ -76,7 +76,7 @@ func sendSignInRequest(t *testing.T, handler http.Handler, req SignInRequest) *h
 func sendRawSignUpRequest(t *testing.T, handler http.Handler, body string) *httptest.ResponseRecorder {
 	t.Helper()
 
-	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/sign-up", bytes.NewReader([]byte(body)))
+	httpReq := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/auth/sign-up", bytes.NewReader([]byte(body)))
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	recorder := httptest.NewRecorder()
@@ -90,7 +90,7 @@ func sendRawSignUpRequest(t *testing.T, handler http.Handler, body string) *http
 func sendRawSignInRequest(t *testing.T, handler http.Handler, body string) *httptest.ResponseRecorder {
 	t.Helper()
 
-	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/sign-in", bytes.NewReader([]byte(body)))
+	httpReq := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/auth/sign-in", bytes.NewReader([]byte(body)))
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	recorder := httptest.NewRecorder()
@@ -170,7 +170,7 @@ func getUserByUsername(ctx context.Context, pool *pgxpool.Pool, testID, username
 
 // getSessionByID queries Redis for session by ID.
 // Returns nil session if not found (not an error).
-func getSessionByID(ctx context.Context, client *redis.Client, testID string, sessionID uuid.UUID) (*domain.Session, error) {
+func getSessionByID(ctx context.Context, client *redis.Client, _ string, sessionID uuid.UUID) (*domain.Session, error) {
 	// Use the same key format as the production code: "session:UUID"
 	key := fmt.Sprintf("session:%s", sessionID.String())
 
@@ -211,7 +211,7 @@ func countUsers(ctx context.Context, pool *pgxpool.Pool, testID string) (int, er
 }
 
 // countSessions returns count of sessions with test ID prefix in Redis.
-func countSessions(ctx context.Context, client *redis.Client, testID string) (int, error) {
+func countSessions(ctx context.Context, client *redis.Client, _ string) (int, error) {
 	// Sessions are stored with key "session:UUID", not prefixed with testID
 	// For counting test sessions, we need to check all sessions
 	// This is a simplification - in a real scenario with many tests,
@@ -257,7 +257,7 @@ func deleteAllUsers(ctx context.Context, pool *pgxpool.Pool, testID string) erro
 }
 
 // deleteAllSessions removes all session records with test ID prefix from Redis.
-func deleteAllSessions(ctx context.Context, client *redis.Client, testID string) error {
+func deleteAllSessions(ctx context.Context, client *redis.Client, _ string) error {
 	// Sessions are stored with key "session:UUID", not prefixed with testID
 	pattern := "session:*"
 
@@ -296,21 +296,6 @@ func assertHTTPStatus(t *testing.T, response *httptest.ResponseRecorder, expecte
 	}
 }
 
-// assertCookieExists fails test if named cookie doesn't exist in response.
-func assertCookieExists(t *testing.T, response *httptest.ResponseRecorder, cookieName string) *http.Cookie {
-	t.Helper()
-
-	cookies := response.Result().Cookies()
-	for _, cookie := range cookies {
-		if cookie.Name == cookieName {
-			return cookie
-		}
-	}
-
-	t.Fatalf("cookie '%s' not found in response", cookieName)
-	return nil // Unreachable
-}
-
 // verifyPasswordHash verifies that stored hash is valid for given plaintext password.
 func verifyPasswordHash(t *testing.T, hasher user_service.PasswordHasher, hash []byte, plaintext string) {
 	t.Helper()
@@ -334,13 +319,23 @@ func parseUUID(s string) (uuid.UUID, error) {
 // Sign-Out Request Helpers
 
 // sendSignOutRequest sends HTTP POST request to sign-out endpoint with session cookie.
+// It simulates the auth middleware by adding sessionID to the request context.
 func sendSignOutRequest(t *testing.T, handler http.Handler, sessionCookie *http.Cookie) *httptest.ResponseRecorder {
 	t.Helper()
 
-	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/sign-out", nil)
+	httpReq := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/auth/sign-out", http.NoBody)
 	httpReq.Header.Set("Content-Type", "application/json")
+
 	if sessionCookie != nil {
 		httpReq.AddCookie(sessionCookie)
+
+		// Parse session ID from cookie and add to context (simulating auth middleware)
+		sessionID, err := uuid.Parse(sessionCookie.Value)
+		if err == nil {
+			// Add sessionID to context using the same key as auth middleware
+			ctx := context.WithValue(httpReq.Context(), contextKey("sessionID"), sessionID)
+			httpReq = httpReq.WithContext(ctx)
+		}
 	}
 
 	recorder := httptest.NewRecorder()
@@ -353,15 +348,25 @@ func sendSignOutRequest(t *testing.T, handler http.Handler, sessionCookie *http.
 func sendSignOutRequestWithRawCookie(t *testing.T, handler http.Handler, cookieName, cookieValue string) *httptest.ResponseRecorder {
 	t.Helper()
 
-	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/sign-out", nil)
+	httpReq := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/auth/sign-out", http.NoBody)
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.AddCookie(&http.Cookie{
 		Name:  cookieName,
 		Value: cookieValue,
 	})
 
+	// Try to parse and add sessionID to context
+	sessionID, err := uuid.Parse(cookieValue)
+	if err == nil {
+		ctx := context.WithValue(httpReq.Context(), contextKey("sessionID"), sessionID)
+		httpReq = httpReq.WithContext(ctx)
+	}
+
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, httpReq)
 
 	return recorder
 }
+
+// contextKey is the type for context keys (matches the auth middleware)
+type contextKey string

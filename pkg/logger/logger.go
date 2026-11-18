@@ -37,10 +37,10 @@ type Logger struct {
 
 var _ Interface = (*Logger)(nil)
 
-func New(level string, folder string) (*Logger, error) {
+func New(level, folder string) (*Logger, error) {
 	l := parseLevel(level)
 
-	if err := os.MkdirAll(folder, 0755); err != nil {
+	if err := os.MkdirAll(folder, 0o750); err != nil {
 		return nil, fmt.Errorf("logger - New - os.MkfirAll: %w", err)
 	}
 
@@ -131,7 +131,9 @@ func (l *Logger) msg(level zerolog.Level, message any, args ...any) {
 }
 
 func (l *Logger) Close() {
-	l.lg.Close()
+	if err := l.lg.Close(); err != nil {
+		l.logger.Err(err)
+	}
 }
 
 // GetZerolog returns the underlying zerolog.Logger

@@ -76,7 +76,13 @@ func (p *Postgres) Close() {
 }
 
 func safeIntToInt32(v int) int32 {
-	clamped := v & math.MaxInt32
+	if v > math.MaxInt32 {
+		return math.MaxInt32
+	}
 
-	return int32(clamped)
+	if v < math.MinInt32 {
+		return math.MinInt32
+	}
+
+	return int32(v)
 }

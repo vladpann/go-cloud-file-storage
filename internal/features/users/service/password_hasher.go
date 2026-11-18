@@ -4,8 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	core_errors "github.com/vladpann/go-cloud-file-storage/internal/core/errors"
 	"golang.org/x/crypto/bcrypt"
+
+	core_errors "github.com/vladpann/go-cloud-file-storage/internal/core/errors"
 )
 
 type Hasher struct{}

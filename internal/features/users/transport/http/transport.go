@@ -2,9 +2,11 @@ package users_transport_http
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+
 	"github.com/vladpann/go-cloud-file-storage/config"
 	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 	core_http_middleware "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/middleware"
@@ -50,16 +52,21 @@ func NewUsersHTTPHandler(
 	usersService UsersService,
 	sessionsService SessionsService,
 	authMiddleware core_http_middleware.Middleware,
-	config *config.Config,
+	cfg *config.Config,
 	l logger.Interface,
-	validator *validator.Validate,
+	v *validator.Validate,
 ) *UsersHTTPHandler {
 	return &UsersHTTPHandler{
 		usersService:    usersService,
 		sessionsService: sessionsService,
 		authMiddleware:  authMiddleware,
-		config:          config,
+		config:          cfg,
 		l:               l,
-		validator:       validator,
+		validator:       v,
 	}
+}
+
+// AuthMiddleware returns the authentication middleware
+func (h *UsersHTTPHandler) AuthMiddleware() func(http.Handler) http.Handler {
+	return h.authMiddleware
 }

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5/middleware"
+
 	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
 )
 

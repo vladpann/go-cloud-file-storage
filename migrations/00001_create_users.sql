@@ -1,5 +1,5 @@
 -- +goose Up
-CREATE SCHEMA cloud_file_storage;
+CREATE SCHEMA IF NOT EXISTS cloud_file_storage;
 
 CREATE TABLE IF NOT EXISTS cloud_file_storage.users (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),

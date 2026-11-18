@@ -2,6 +2,7 @@ package sessions_repository_redis
 
 import (
 	"github.com/google/uuid"
+
 	"github.com/vladpann/go-cloud-file-storage/pkg/redis"
 )
 

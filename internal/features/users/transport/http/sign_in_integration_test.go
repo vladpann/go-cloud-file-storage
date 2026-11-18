@@ -390,10 +390,10 @@ func TestSignIn_InvalidRequest_MalformedJSON(t *testing.T) {
 		},
 	}
 
-	for _, tc_json := range testCases {
-		t.Run(tc_json.name, func(t *testing.T) {
+	for _, tcJSON := range testCases {
+		t.Run(tcJSON.name, func(t *testing.T) {
 			// Step 1: Send sign-in request with malformed JSON
-			response := sendRawSignInRequest(t, tc.router, tc_json.body)
+			response := sendRawSignInRequest(t, tc.router, tcJSON.body)
 
 			// Step 2: Verify HTTP status code
 			assertHTTPStatus(t, response, http.StatusBadRequest)

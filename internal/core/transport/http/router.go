@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/vladpann/go-cloud-file-storage/config"
 	core_http_middleware "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/middleware"
 	v1 "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/v1"
@@ -43,11 +44,12 @@ func buildMiddlewareChain(cfg *config.Config, l logger.Interface) []core_http_mi
 		middlewares = append(middlewares, core_http_middleware.TracingMiddlewares()...)
 	}
 
-	// 3. Recovery - should be early to catch panics from other middleware
-	middlewares = append(middlewares, core_http_middleware.Recovery(l))
-
-	// 4. Logger - after recovery to ensure panics are logged
-	middlewares = append(middlewares, core_http_middleware.Logger(l))
+	middlewares = append(middlewares,
+		// 3. Recovery - should be early to catch panics from other middleware
+		core_http_middleware.Recovery(l),
+		// 4. Logger - after recovery to ensure panics are logged
+		core_http_middleware.Logger(l),
+	)
 
 	return middlewares
 }
