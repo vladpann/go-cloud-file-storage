@@ -5,13 +5,13 @@ on:
     types: [opened, synchronize, reopened]
 
 env:
-  GO_VERSION: '1.26.0'
+  GO_VERSION: '1.26'
 
 jobs:
   pr-validation:
     name: PR Validation
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -60,7 +60,7 @@ jobs:
       go: ${{ steps.filter.outputs.go }}
       docker: ${{ steps.filter.outputs.docker }}
       docs: ${{ steps.filter.outputs.docs }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -87,7 +87,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -102,15 +102,15 @@ jobs:
         run: |
           # Get list of changed Go files
           CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }} | grep '\.go$' || true)
-          
+
           if [ -z "$CHANGED_FILES" ]; then
             echo "No Go files changed"
             exit 0
           fi
-          
+
           # Extract unique package paths
           PACKAGES=$(echo "$CHANGED_FILES" | xargs -I {} dirname {} | sort -u | sed 's|^|./|')
-          
+
           echo "Testing packages: $PACKAGES"
           go test -v -race -coverprofile=coverage.out $PACKAGES
 
@@ -119,7 +119,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docker == 'true'
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -144,7 +144,7 @@ jobs:
   pr-size:
     name: Check PR Size
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -155,7 +155,7 @@ jobs:
         run: |
           LINES_CHANGED=$(git diff --shortstat origin/${{ github.base_ref }} | awk '{print $4+$6}')
           echo "Lines changed: $LINES_CHANGED"
-          
+
           if [ "$LINES_CHANGED" -gt 1000 ]; then
             echo "::warning::This PR is quite large ($LINES_CHANGED lines). Consider splitting it into smaller PRs."
           fi
@@ -170,14 +170,14 @@ jobs:
               repo: context.repo.repo,
               pull_number: context.issue.number
             });
-            
+
             const additions = pr.additions;
             const deletions = pr.deletions;
             const total = additions + deletions;
-            
+
             let size = 'small';
             let emoji = '🟢';
-            
+
             if (total > 1000) {
               size = 'large';
               emoji = '🔴';
@@ -185,17 +185,17 @@ jobs:
               size = 'medium';
               emoji = '🟡';
             }
-            
+
             const body = `
             ${emoji} **PR Size: ${size}**
-            
+
             - Additions: +${additions}
             - Deletions: -${deletions}
             - Total: ${total} lines
-            
+
             ${total > 1000 ? '⚠️ This PR is quite large. Consider splitting it into smaller, focused PRs for easier review.' : ''}
             `;
-            
+
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,

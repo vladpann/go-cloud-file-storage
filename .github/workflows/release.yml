@@ -6,7 +6,7 @@ on:
       - 'v*.*.*'
 
 env:
-  GO_VERSION: '1.26.0'
+  GO_VERSION: '1.26'
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -17,7 +17,7 @@ jobs:
     permissions:
       contents: write
       packages: write
-      
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,13 +39,13 @@ jobs:
         id: changelog
         run: |
           PREV_TAG=$(git describe --tags --abbrev=0 ${{ github.ref }}^ 2>/dev/null || echo "")
-          
+
           if [ -z "$PREV_TAG" ]; then
             COMMITS=$(git log --pretty=format:"- %s (%h)" ${{ github.ref }})
           else
             COMMITS=$(git log --pretty=format:"- %s (%h)" $PREV_TAG..${{ github.ref }})
           fi
-          
+
           echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
           echo "$COMMITS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -53,14 +53,14 @@ jobs:
       - name: Build binaries
         run: |
           mkdir -p dist
-          
+
           # Build for different platforms
           GOOS=linux GOARCH=amd64 go build -o dist/go-cloud-file-storage-linux-amd64 -ldflags="-s -w -X main.version=${{ steps.version.outputs.VERSION }}" ./cmd/app
           GOOS=linux GOARCH=arm64 go build -o dist/go-cloud-file-storage-linux-arm64 -ldflags="-s -w -X main.version=${{ steps.version.outputs.VERSION }}" ./cmd/app
           GOOS=darwin GOARCH=amd64 go build -o dist/go-cloud-file-storage-darwin-amd64 -ldflags="-s -w -X main.version=${{ steps.version.outputs.VERSION }}" ./cmd/app
           GOOS=darwin GOARCH=arm64 go build -o dist/go-cloud-file-storage-darwin-arm64 -ldflags="-s -w -X main.version=${{ steps.version.outputs.VERSION }}" ./cmd/app
           GOOS=windows GOARCH=amd64 go build -o dist/go-cloud-file-storage-windows-amd64.exe -ldflags="-s -w -X main.version=${{ steps.version.outputs.VERSION }}" ./cmd/app
-          
+
           # Create checksums
           cd dist
           sha256sum * > checksums.txt
@@ -72,21 +72,21 @@ jobs:
           name: Release ${{ steps.version.outputs.VERSION }}
           body: |
             ## What's Changed
-            
+
             ${{ steps.changelog.outputs.CHANGELOG }}
-            
+
             ## Docker Images
-            
+
             ```bash
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION_NUMBER }}
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ```
-            
+
             ## Installation
-            
+
             ### Binary
             Download the appropriate binary for your platform from the assets below.
-            
+
             ### Docker
             ```bash
             docker run -d \
@@ -111,7 +111,7 @@ jobs:
     environment:
       name: production
       url: https://your-production-url.com
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

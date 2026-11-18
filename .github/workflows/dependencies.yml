@@ -7,13 +7,13 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VERSION: '1.26.0'
+  GO_VERSION: '1.26'
 
 jobs:
   update-dependencies:
     name: Check and Update Dependencies
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -43,16 +43,16 @@ jobs:
           title: 'chore: Update Go dependencies'
           body: |
             ## Dependencies Update
-            
+
             This PR updates Go dependencies to their latest versions.
-            
+
             ### Changes
             - Updated all Go modules
             - Ran `go mod tidy`
-            
+
             ### Security
             - Ran `govulncheck` to scan for vulnerabilities
-            
+
             Please review the changes and run tests before merging.
           branch: dependencies-update
           delete-branch: true
