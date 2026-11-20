@@ -7,9 +7,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	core_errors "github.com/vladpann/go-cloud-file-storage/internal/core/errors"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+
+	core_errors "github.com/vladpann/go-cloud-file-storage/internal/core/errors"
 )
 
 func (r *UsersRepository) GetUsernameByUserID(

@@ -44,11 +44,11 @@ func TestMe_SuccessfulUserMe(t *testing.T) {
 	signInResp := sendSignInRequest(t, tc.router, signInReq)
 	assertHTTPStatus(t, signInResp, http.StatusOK)
 
-	cookie, err := extractSessionCookie(t, signInResp)
+	sessionCookie, err := extractSessionCookie(t, signInResp)
 	require.NoError(t, err, "session cookie should be present in response")
 
 	// Step 1: Send me request
-	response := sendMeRequest(t, tc.router, cookie)
+	response := sendMeRequest(t, tc.router, sessionCookie)
 
 	// Step 2: Verify HTTP status code
 	assertHTTPStatus(t, response, http.StatusOK)
@@ -123,15 +123,15 @@ func TestMe_AfterSignOut(t *testing.T) {
 	signInResp := sendSignInRequest(t, tc.router, signInReq)
 	assertHTTPStatus(t, signInResp, http.StatusOK)
 
-	cookies, err := extractSessionCookie(t, signInResp)
+	sessionCookie, err := extractSessionCookie(t, signInResp)
 	require.NoError(t, err, "failed to extract session cookie")
 
 	// Step 1: Sign out to invalidate the session in Redis
-	signOutResp := sendSignOutRequest(t, tc.router, cookies)
+	signOutResp := sendSignOutRequest(t, tc.router, sessionCookie)
 	assertHTTPStatus(t, signOutResp, http.StatusNoContent)
 
 	// Step 2: Send me request with the invalidated session cookies
-	response := sendMeRequest(t, tc.router, cookies)
+	response := sendMeRequest(t, tc.router, sessionCookie)
 
 	// Step 3: Verify HTTP status code is 401 Unauthorized
 	assertHTTPStatus(t, response, http.StatusUnauthorized)

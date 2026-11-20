@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+
+	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 )
 
 func (s *UsersService) GetUserByUsername(
