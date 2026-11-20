@@ -511,6 +511,10 @@ func (tc *TestContext) setupTestRouter() http.Handler {
 			// Protected route with auth middleware
 			r.With(tc.httpHandler.AuthMiddleware()).Post("/sign-out", tc.httpHandler.SignOut)
 		})
+
+		r.Route("/user", func(r chi.Router) {
+			r.With(tc.httpHandler.AuthMiddleware()).Get("/me", tc.httpHandler.Me)
+		})
 	})
 
 	return r

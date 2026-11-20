@@ -10,14 +10,6 @@ import (
 // NewTestConfig creates a configuration for testing purposes.
 // It accepts connection strings for PostgreSQL and Redis and configures
 // test-specific values that mirror production settings where appropriate.
-//
-// Configuration values:
-//   - Session TTL: 24 hours (matches production)
-//   - Password hashing: bcrypt with cost 10 (bcrypt.DefaultCost, matches production)
-//   - Tracing: disabled (reduces test overhead)
-//   - Logging: debug level (detailed output for test debugging)
-//   - Connection pool: 5 connections (smaller than production)
-//   - Cookie secure: true (can be overridden per test if needed)
 func NewTestConfig(postgresURL, redisAddr, redisPassword string) *config.Config {
 	env := map[string]string{
 		"APP_NAME":              "test-app",
@@ -29,6 +21,8 @@ func NewTestConfig(postgresURL, redisAddr, redisPassword string) *config.Config 
 		"PG_URL":                postgresURL,
 		"REDIS_ADDR":            redisAddr,
 		"REDIS_PASSWORD":        redisPassword,
+		"MINIO_ROOT_USER":       "admin_test",     // minioUser
+		"MINIO_ROOT_PASSWORD":   "secret123_test", // minioPassword
 		"SESSION_TTL":           "24h",
 		"SESSION_COOKIE_SECURE": "true",
 		"TRACING_ENABLED":       "false",

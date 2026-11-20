@@ -20,7 +20,7 @@ func (s *UsersService) SignIn(
 	span.SetAttributes(attribute.String("user.username", username))
 
 	// Get user by username
-	userModel, err := s.usersRepository.GetUserByUsername(ctx, username)
+	userModel, err := s.GetUserByUsername(ctx, username)
 	if err != nil {
 		err = fmt.Errorf("user_service - SignIn - s.usersRepository.GetUserByUsername: %w", err)
 		span.RecordError(err)

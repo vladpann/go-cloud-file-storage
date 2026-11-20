@@ -23,7 +23,6 @@ func (h *UsersHTTPHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 	// Get session ID
 	sessionID, ok := core_http_middleware.GetSessionIDFromContext(ctx)
 	if !ok {
-		// Wrap with ErrInvalidArgument to return 400 instead of 500
 		err := fmt.Errorf("invalid session ID: %w", core_errors.ErrInvalidArgument)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "invalid session ID")

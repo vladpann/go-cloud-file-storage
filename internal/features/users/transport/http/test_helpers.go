@@ -71,6 +71,23 @@ func sendSignInRequest(t *testing.T, handler http.Handler, req SignInRequest) *h
 	return recorder
 }
 
+// sendMeRequest sends HTTP GET request to me endpoint and returns response.
+func sendMeRequest(t *testing.T, handler http.Handler, sessionCookie *http.Cookie) *httptest.ResponseRecorder {
+	t.Helper()
+
+	httpReq := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/user/me", nil)
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	if sessionCookie != nil {
+		httpReq.AddCookie(sessionCookie)
+	}
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httpReq)
+
+	return recorder
+}
+
 // sendRawSignUpRequest sends HTTP POST request to sign-up endpoint with raw body string.
 // Used for testing malformed JSON and invalid request bodies.
 func sendRawSignUpRequest(t *testing.T, handler http.Handler, body string) *httptest.ResponseRecorder {

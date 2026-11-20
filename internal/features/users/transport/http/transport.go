@@ -30,11 +30,22 @@ type UsersService interface {
 		password string,
 		repeatPassword string,
 	) (domain.User, error)
+
 	SignIn(
 		ctx context.Context,
 		username string,
 		password string,
 	) (uuid.UUID, error)
+
+	GetUserByUsername(
+		ctx context.Context,
+		username string,
+	) (domain.User, error)
+
+	GetUsernameByUserID(
+		ctx context.Context,
+		userID uuid.UUID,
+	) (string, error)
 }
 
 type SessionsService interface {
