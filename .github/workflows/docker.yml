@@ -61,23 +61,25 @@ jobs:
           context: .
           file: ./Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          cache-to: ${{ github.event_name != 'pull_request' && 'type=gha,mode=max' || '' }}
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
 
-      # Имя образа берём из metadata-action: оно уже приведено к нижнему регистру
       - name: Run Trivy vulnerability scanner on image
-        if: github.event_name != 'pull_request'
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}@${{ steps.build.outputs.digest }}
+          image-ref: ${{ github.event_name == 'pull_request' && fromJSON(steps.meta.outputs.json).tags[0] || format('{0}@{1}', fromJSON(steps.meta.outputs.json).tags[0], steps.build.outputs.digest) }}
           format: 'sarif'
           output: 'trivy-image-results.sarif'
 
       - name: Upload Trivy results to GitHub Security tab
-        if: always() && github.event_name != 'pull_request' && hashFiles('trivy-image-results.sarif') != ''
+        if: |
+          !cancelled() &&
+          hashFiles('trivy-image-results.sarif') != '' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: 'trivy-image-results.sarif'
