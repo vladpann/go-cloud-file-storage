@@ -27,6 +27,11 @@ type SignInResponse struct {
 	Username string `json:"username"`
 }
 
+// MeResponse represents the me response
+type MeResponse struct {
+	Username string `json:"username"`
+}
+
 // signUpResponseFromDomain converts a domain user into the sign-up response DTO
 func signUpResponseFromDomain(user domain.User) SignUpResponse {
 	return SignUpResponse{

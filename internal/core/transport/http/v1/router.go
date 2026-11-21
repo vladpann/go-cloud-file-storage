@@ -17,4 +17,8 @@ func NewRoutes(apiV1Group chi.Router, v1Transports *V1, l logger.Interface) {
 		// Protected routes (require authentication)
 		r.With(v1Transports.Users.AuthMiddleware()).Post("/sign-out", v1Transports.Users.SignOut)
 	})
+
+	apiV1Group.Route("/user", func(r chi.Router) {
+		r.With(v1Transports.Users.AuthMiddleware()).Get("/me", v1Transports.Users.Me)
+	})
 }

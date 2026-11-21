@@ -3,6 +3,8 @@ package user_service
 import (
 	"context"
 
+	"github.com/google/uuid"
+
 	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 )
 
@@ -22,10 +24,16 @@ type UsersRepository interface {
 		username string,
 		passwordHash []byte,
 	) (domain.User, error)
+
 	GetUserByUsername(
 		ctx context.Context,
 		username string,
 	) (domain.User, error)
+
+	GetUsernameByUserID(
+		ctx context.Context,
+		userID uuid.UUID,
+	) (string, error)
 }
 
 func New(
