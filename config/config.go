@@ -48,7 +48,7 @@ type (
 		AccessKeyID     string `env:"MINIO_ROOT_USER,required"`
 		SecretAccessKey string `env:"MINIO_ROOT_PASSWORD,required"`
 		UseSSL          bool   `env:"MINIO_USE_SSL" envDefault:"false"`
-		BucketName      string `env:"MINIO_BUCKET_NAME" envDefault:"files"`
+		BucketName      string `env:"MINIO_BUCKET_NAME" envDefault:"user-files"`
 	}
 
 	session struct {

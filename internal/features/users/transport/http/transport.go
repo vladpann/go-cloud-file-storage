@@ -15,12 +15,13 @@ import (
 
 // UsersHTTPHandler handles HTTP requests for user operations
 type UsersHTTPHandler struct {
-	usersService    UsersService
-	sessionsService SessionsService
-	authMiddleware  core_http_middleware.Middleware
-	config          *config.Config
-	l               logger.Interface
-	validator       *validator.Validate
+	usersService     UsersService
+	sessionsService  SessionsService
+	resourcesService ResourcesService
+	authMiddleware   core_http_middleware.Middleware
+	config           *config.Config
+	l                logger.Interface
+	validator        *validator.Validate
 }
 
 type UsersService interface {
@@ -59,21 +60,30 @@ type SessionsService interface {
 	) error
 }
 
+type ResourcesService interface {
+	CreateParentFolder(
+		ctx context.Context,
+		userID uuid.UUID,
+	) error
+}
+
 func NewUsersHTTPHandler(
 	usersService UsersService,
 	sessionsService SessionsService,
+	resourcesService ResourcesService,
 	authMiddleware core_http_middleware.Middleware,
 	cfg *config.Config,
 	l logger.Interface,
 	v *validator.Validate,
 ) *UsersHTTPHandler {
 	return &UsersHTTPHandler{
-		usersService:    usersService,
-		sessionsService: sessionsService,
-		authMiddleware:  authMiddleware,
-		config:          cfg,
-		l:               l,
-		validator:       v,
+		usersService:     usersService,
+		sessionsService:  sessionsService,
+		resourcesService: resourcesService,
+		authMiddleware:   authMiddleware,
+		config:           cfg,
+		l:                l,
+		validator:        v,
 	}
 }
 

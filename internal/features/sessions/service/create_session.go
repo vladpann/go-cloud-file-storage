@@ -6,14 +6,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
 	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 )
 
-var tracer = otel.Tracer("github.com/vladpann/go-cloud-file-storage/internal/features/sessions/service")
+
 
 func (s *SessionsService) CreateSession(
 	ctx context.Context,

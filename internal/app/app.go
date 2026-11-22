@@ -14,6 +14,8 @@ import (
 	core_http "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http"
 	core_http_middleware "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/middleware"
 	core_http_v1 "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/v1"
+	resources_repository_minio "github.com/vladpann/go-cloud-file-storage/internal/features/resources/repository/minio"
+	resources_service "github.com/vladpann/go-cloud-file-storage/internal/features/resources/service"
 	sessions_repository_redis "github.com/vladpann/go-cloud-file-storage/internal/features/sessions/repository/redis"
 	sessions_service "github.com/vladpann/go-cloud-file-storage/internal/features/sessions/service"
 	users_repository_postgres "github.com/vladpann/go-cloud-file-storage/internal/features/users/repository/postgres"
@@ -28,25 +30,30 @@ import (
 )
 
 type features struct {
-	sessions *sessions_service.SessionsService
-	users    *users_service.UsersService
+	users     *users_service.UsersService
+	sessions  *sessions_service.SessionsService
+	resources *resources_service.ResourcesService
 }
 
 type servers struct {
 	http *httpserver.Server
 }
 
-func initFeatures(cfg *config.Config, pg *postgres.Postgres, rdb *redis.Redis) features {
-	sessionsRepository := sessions_repository_redis.New(rdb)
-	sessionsService := sessions_service.New(cfg, sessionsRepository)
-
+func initFeatures(cfg *config.Config, pg *postgres.Postgres, rdb *redis.Redis, mc *minio.Client) features {
 	usersRepository := users_repository_postgres.New(pg)
 	passwordHasher := users_service.NewPasswordHasher()
 	usersService := users_service.New(usersRepository, passwordHasher)
 
+	sessionsRepository := sessions_repository_redis.New(rdb)
+	sessionsService := sessions_service.New(cfg, sessionsRepository)
+
+	resourcesRepository := resources_repository_minio.New(mc)
+	resourcesService := resources_service.New(cfg, resourcesRepository)
+
 	return features{
-		sessions: sessionsService,
-		users:    usersService,
+		users:     usersService,
+		sessions:  sessionsService,
+		resources: resourcesService,
 	}
 }
 
@@ -60,6 +67,7 @@ func initV1HTTPHandlers(cfg *config.Config, feat features, l logger.Interface) *
 	usersTransport := users_transport_http.NewUsersHTTPHandler(
 		feat.users,
 		feat.sessions,
+		feat.resources,
 		authMiddleware,
 		cfg,
 		l,
@@ -148,7 +156,7 @@ func Run(cfg *config.Config) {
 	defer rdb.Close()
 
 	// MinIO
-	minioClient, err := minio.New(ctx, minio.Config{
+	mc, err := minio.New(ctx, minio.Config{
 		Endpoint:        cfg.MinIO.Endpoint,
 		AccessKeyID:     cfg.MinIO.AccessKeyID,
 		SecretAccessKey: cfg.MinIO.SecretAccessKey,
@@ -158,9 +166,8 @@ func Run(cfg *config.Config) {
 	if err != nil {
 		l.Fatal(fmt.Errorf("app - Run - minio.New: %w", err))
 	}
-	l.Info("MinIO client initialized, bucket: %s", minioClient.BucketName())
 
-	f := initFeatures(cfg, pg, rdb)
+	f := initFeatures(cfg, pg, rdb, mc)
 	v1HTTPHandlers := initV1HTTPHandlers(cfg, f, l)
 	s := initServers(cfg, v1HTTPHandlers, l)
 	s.startServers()

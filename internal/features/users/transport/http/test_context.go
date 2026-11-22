@@ -25,6 +25,7 @@ import (
 
 	"github.com/vladpann/go-cloud-file-storage/config"
 	core_http_middleware "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/middleware"
+	resources_service "github.com/vladpann/go-cloud-file-storage/internal/features/resources/service"
 	sessions_repository_redis "github.com/vladpann/go-cloud-file-storage/internal/features/sessions/repository/redis"
 	sessions_service "github.com/vladpann/go-cloud-file-storage/internal/features/sessions/service"
 	users_repository_postgres "github.com/vladpann/go-cloud-file-storage/internal/features/users/repository/postgres"
@@ -62,8 +63,9 @@ type TestContext struct {
 	sessionsRepo *sessions_repository_redis.SessionsRepository
 
 	// Services
-	usersService    *user_service.UsersService
-	sessionsService *sessions_service.SessionsService
+	usersService     *user_service.UsersService
+	sessionsService  *sessions_service.SessionsService
+	resourcesService *resources_service.ResourcesService
 
 	// Handler and Router
 	httpHandler *UsersHTTPHandler
@@ -209,6 +211,7 @@ func NewTestContext(ctx context.Context) (*TestContext, error) {
 	tc.httpHandler = NewUsersHTTPHandler(
 		tc.usersService,
 		tc.sessionsService,
+		tc.resourcesService,
 		authMiddleware,
 		tc.config,
 		tc.logger,

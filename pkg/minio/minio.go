@@ -1,8 +1,11 @@
 package minio
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"strings"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -67,4 +70,38 @@ func (c *Client) ensureBucketExists(ctx context.Context) error {
 // BucketName returns the configured bucket name.
 func (c *Client) BucketName() string {
 	return c.bucketName
+}
+
+// PutObject uploads an object into the configured bucket.
+func (c *Client) PutObject(
+	ctx context.Context,
+	objectName string,
+	reader io.Reader,
+	objectSize int64,
+	opts minio.PutObjectOptions,
+) (minio.UploadInfo, error) {
+	return c.Client.PutObject(ctx, c.bucketName, objectName, reader, objectSize, opts)
+}
+
+// CreateFolder creates a zero-byte directory marker object (key must end with "/").
+func (c *Client) CreateFolder(ctx context.Context, folderKey string) error {
+	if !strings.HasSuffix(folderKey, "/") {
+		folderKey += "/"
+	}
+
+	_, err := c.Client.PutObject(
+		ctx,
+		c.bucketName,
+		folderKey,
+		bytes.NewReader(nil),
+		0,
+		minio.PutObjectOptions{
+			ContentType: "application/x-directory",
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create folder %q: %w", folderKey, err)
+	}
+
+	return nil
 }

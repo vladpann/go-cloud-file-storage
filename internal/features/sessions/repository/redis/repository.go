@@ -3,17 +3,17 @@ package sessions_repository_redis
 import (
 	"github.com/google/uuid"
 
-	"github.com/vladpann/go-cloud-file-storage/pkg/redis"
+	pkgredis "github.com/vladpann/go-cloud-file-storage/pkg/redis"
 )
 
 const keyPrefix = "session:"
 
 type SessionsRepository struct {
-	rdb *redis.Redis
+	rdb *pkgredis.Redis
 }
 
 func New(
-	rdb *redis.Redis,
+	rdb *pkgredis.Redis,
 ) *SessionsRepository {
 	return &SessionsRepository{
 		rdb: rdb,

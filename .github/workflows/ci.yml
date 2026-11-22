@@ -92,7 +92,7 @@ jobs:
       MINIO_ROOT_PASSWORD: secret123
       MINIO_ENDPOINT: localhost:9000
       MINIO_USE_SSL: false
-      MINIO_BUCKET_NAME: files
+      MINIO_BUCKET_NAME: user-files
 
       # Session
       SESSION_COOKIE_SECURE: false
