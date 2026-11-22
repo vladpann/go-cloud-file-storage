@@ -34,7 +34,6 @@ import (
 	"github.com/vladpann/go-cloud-file-storage/internal/testutil"
 	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
 	"github.com/vladpann/go-cloud-file-storage/pkg/minio"
-	pkg_minio "github.com/vladpann/go-cloud-file-storage/pkg/minio"
 	"github.com/vladpann/go-cloud-file-storage/pkg/postgres"
 	pkg_redis "github.com/vladpann/go-cloud-file-storage/pkg/redis"
 )
@@ -188,7 +187,7 @@ func NewTestContext(ctx context.Context) (*TestContext, error) {
 		return nil, fmt.Errorf("failed to ping test Redis: %w", err)
 	}
 
-	minioClient, err := pkg_minio.New(ctx, pkg_minio.Config{
+	minioClient, err := minio.New(ctx, minio.Config{
 		Endpoint:        minioEndPoint,
 		AccessKeyID:     minioAccessKey,
 		SecretAccessKey: minioSecretKey,
