@@ -10,7 +10,7 @@ import (
 // NewTestConfig creates a configuration for testing purposes.
 // It accepts connection strings for PostgreSQL and Redis and configures
 // test-specific values that mirror production settings where appropriate.
-func NewTestConfig(postgresURL, redisAddr, redisPassword string) *config.Config {
+func NewTestConfig(postgresURL, redisAddr, redisPassword, minioAccessKey, minioSecretKey string) *config.Config {
 	env := map[string]string{
 		"APP_NAME":              "test-app",
 		"APP_VERSION":           "test",
@@ -21,8 +21,8 @@ func NewTestConfig(postgresURL, redisAddr, redisPassword string) *config.Config 
 		"PG_URL":                postgresURL,
 		"REDIS_ADDR":            redisAddr,
 		"REDIS_PASSWORD":        redisPassword,
-		"MINIO_ROOT_USER":       "admin_test",     // minioUser
-		"MINIO_ROOT_PASSWORD":   "secret123_test", // minioPassword
+		"MINIO_ROOT_USER":       minioAccessKey,
+		"MINIO_ROOT_PASSWORD":   minioSecretKey,
 		"SESSION_TTL":           "24h",
 		"SESSION_COOKIE_SECURE": "true",
 		"TRACING_ENABLED":       "false",

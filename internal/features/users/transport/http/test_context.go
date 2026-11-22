@@ -25,6 +25,7 @@ import (
 
 	"github.com/vladpann/go-cloud-file-storage/config"
 	core_http_middleware "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/middleware"
+	resources_repository_minio "github.com/vladpann/go-cloud-file-storage/internal/features/resources/repository/minio"
 	resources_service "github.com/vladpann/go-cloud-file-storage/internal/features/resources/service"
 	sessions_repository_redis "github.com/vladpann/go-cloud-file-storage/internal/features/sessions/repository/redis"
 	sessions_service "github.com/vladpann/go-cloud-file-storage/internal/features/sessions/service"
@@ -32,6 +33,8 @@ import (
 	user_service "github.com/vladpann/go-cloud-file-storage/internal/features/users/service"
 	"github.com/vladpann/go-cloud-file-storage/internal/testutil"
 	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
+	"github.com/vladpann/go-cloud-file-storage/pkg/minio"
+	pkg_minio "github.com/vladpann/go-cloud-file-storage/pkg/minio"
 	"github.com/vladpann/go-cloud-file-storage/pkg/postgres"
 	pkg_redis "github.com/vladpann/go-cloud-file-storage/pkg/redis"
 )
@@ -47,10 +50,12 @@ type TestContext struct {
 	// Infrastructure
 	postgresContainer testcontainers.Container
 	redisContainer    testcontainers.Container
+	minioContainer    testcontainers.Container
 
 	// Database connections
 	pgPool      *pgxpool.Pool
 	redisClient *redis.Client
+	minioClient *minio.Client
 
 	// Application dependencies
 	config         *config.Config
@@ -59,8 +64,9 @@ type TestContext struct {
 	passwordHasher user_service.PasswordHasher
 
 	// Repositories
-	usersRepo    *users_repository_postgres.UsersRepository
-	sessionsRepo *sessions_repository_redis.SessionsRepository
+	usersRepo     *users_repository_postgres.UsersRepository
+	sessionsRepo  *sessions_repository_redis.SessionsRepository
+	resourcesRepo *resources_repository_minio.ResourcesRepository
 
 	// Services
 	usersService     *user_service.UsersService
@@ -122,6 +128,19 @@ func NewTestContext(ctx context.Context) (*TestContext, error) {
 		return redisContainer.Terminate(terminateCtx)
 	})
 
+	// Start MinIO container
+	minioContainer, minioEndPoint, minioAccessKey, minioSecretKey, err := tc.startMinioContainer(ctx)
+	if err != nil {
+		tc.Cleanup()
+		return nil, fmt.Errorf("failed to start MinIO container: %w", err)
+	}
+	tc.minioContainer = minioContainer
+	tc.cleanupFns = append(tc.cleanupFns, func() error {
+		terminateCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		return minioContainer.Terminate(terminateCtx)
+	})
+
 	// Apply database migrations
 	if err := tc.applyMigrations(ctx, pgConnString); err != nil {
 		tc.Cleanup()
@@ -169,8 +188,21 @@ func NewTestContext(ctx context.Context) (*TestContext, error) {
 		return nil, fmt.Errorf("failed to ping test Redis: %w", err)
 	}
 
+	minioClient, err := pkg_minio.New(ctx, pkg_minio.Config{
+		Endpoint:        minioEndPoint,
+		AccessKeyID:     minioAccessKey,
+		SecretAccessKey: minioSecretKey,
+		UseSSL:          false,
+		BucketName:      "test-files",
+	})
+	if err != nil {
+		tc.Cleanup()
+		return nil, fmt.Errorf("failed to initialize MinIO client: %w", err)
+	}
+	tc.minioClient = minioClient
+
 	// Create test configuration
-	tc.config = testutil.NewTestConfig(pgConnString, redisAddr, redisPassword)
+	tc.config = testutil.NewTestConfig(pgConnString, redisAddr, redisPassword, minioAccessKey, minioSecretKey)
 
 	// Initialize logger
 	testLogger, err := logger.New(tc.config.Log.Level, tc.config.Log.Folder)
@@ -200,9 +232,13 @@ func NewTestContext(ctx context.Context) (*TestContext, error) {
 	}
 	tc.sessionsRepo = sessions_repository_redis.New(redisWrapper)
 
+	// Resources repository - use the ready-made *pkg_minio.Client
+	tc.resourcesRepo = resources_repository_minio.New(minioClient)
+
 	// Initialize services
 	tc.usersService = user_service.New(tc.usersRepo, tc.passwordHasher)
 	tc.sessionsService = sessions_service.New(tc.config, tc.sessionsRepo)
+	tc.resourcesService = resources_service.New(tc.config, tc.resourcesRepo)
 
 	// Initialize auth middleware
 	authMiddleware := core_http_middleware.Auth(tc.logger, tc.sessionsService)
@@ -402,6 +438,58 @@ func (tc *TestContext) startRedisContainer(ctx context.Context) (container testc
 
 	addr = fmt.Sprintf("%s:%s", host, port.Port())
 	return container, addr, password, nil
+}
+
+// startMinioContainer starts a MinIO test container and returns the container instance,
+// endpoint, access key, and secret key. The container uses cgr.dev/chainguard/minio:latest image.
+// Wait strategy: waits for HTTP 200 OK on /minio/health/live endpoint.
+// Timeout: 30 seconds.
+func (tc *TestContext) startMinioContainer(ctx context.Context) (container testcontainers.Container, endpoint, accessKey, secretKey string, err error) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	accessKey = "minioadmin"
+	secretKey = "minioadmin"
+
+	req := testcontainers.ContainerRequest{
+		Image:        "cgr.dev/chainguard/minio:latest",
+		ExposedPorts: []string{"9000/tcp"},
+		Cmd:          []string{"server", "/data"},
+		Env: map[string]string{
+			"MINIO_ROOT_USER":     accessKey,
+			"MINIO_ROOT_PASSWORD": secretKey,
+		},
+		WaitingFor: wait.ForHTTP("/minio/health/live").
+			WithPort("9000/tcp").
+			WithStartupTimeout(30 * time.Second),
+	}
+
+	container, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	if err != nil {
+		return nil, "", "", "", fmt.Errorf("failed to start MinIO container: %w", err)
+	}
+
+	host, err := container.Host(ctx)
+	if err != nil {
+		if termErr := container.Terminate(ctx); termErr != nil {
+			err = errors.Join(err, termErr)
+		}
+		return nil, "", "", "", fmt.Errorf("failed to get MinIO host: %w", err)
+	}
+
+	port, err := container.MappedPort(ctx, "9000")
+	if err != nil {
+		if termErr := container.Terminate(ctx); termErr != nil {
+			err = errors.Join(err, termErr)
+		}
+		return nil, "", "", "", fmt.Errorf("failed to get MinIO port: %w", err)
+	}
+
+	endpoint = fmt.Sprintf("%s:%s", host, port.Port())
+	return container, endpoint, accessKey, secretKey, nil
 }
 
 // getMigrationsPath locates the migrations directory relative to the test file location.
