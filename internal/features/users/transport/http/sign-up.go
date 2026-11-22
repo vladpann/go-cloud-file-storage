@@ -52,7 +52,7 @@ func (h *UsersHTTPHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		attribute.String("user.username", user.Username),
 	)
 	span.AddEvent("user created")
-	
+
 	err = h.resourcesService.CreateParentFolder(ctx, user.ID)
 	if err != nil {
 		span.RecordError(err)

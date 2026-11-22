@@ -87,13 +87,13 @@ func validateParentPath(p string) error {
 
 // ParseResourcePath parses a full path (for example, “folder1/folder2/file.txt” or “folder1/folder2/”)
 // into parentPath, name, and ResourceType
-func ParseResourcePath(rawPath string) (parentPath string, name string, resType ResourceType, err error) {
+func ParseResourcePath(rawPath string) (parentPath, name string, resType ResourceType, err error) {
 	if rawPath == "" || rawPath == "/" || strings.HasPrefix(rawPath, "/") || strings.Contains(rawPath, "//") {
 		return "", "", "", ErrInvalidPath
 	}
 
 	// Check for path traversal
-	for _, seg := range strings.Split(strings.TrimSuffix(rawPath, "/"), "/") {
+	for seg := range strings.SplitSeq(strings.TrimSuffix(rawPath, "/"), "/") {
 		if seg == "" || seg == "." || seg == ".." {
 			return "", "", "", ErrInvalidPath
 		}

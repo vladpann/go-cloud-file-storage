@@ -78,9 +78,14 @@ func (c *Client) PutObject(
 	objectName string,
 	reader io.Reader,
 	objectSize int64,
-	opts minio.PutObjectOptions,
+	opts *minio.PutObjectOptions,
 ) (minio.UploadInfo, error) {
-	return c.Client.PutObject(ctx, c.bucketName, objectName, reader, objectSize, opts)
+	var putOpts minio.PutObjectOptions
+	if opts != nil {
+		putOpts = *opts
+	}
+
+	return c.Client.PutObject(ctx, c.bucketName, objectName, reader, objectSize, putOpts)
 }
 
 // CreateFolder creates a zero-byte directory marker object (key must end with "/").

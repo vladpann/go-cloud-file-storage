@@ -12,8 +12,6 @@ import (
 	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 )
 
-
-
 func (s *SessionsService) CreateSession(
 	ctx context.Context,
 	userID uuid.UUID,
