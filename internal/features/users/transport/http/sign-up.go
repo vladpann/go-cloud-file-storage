@@ -38,7 +38,7 @@ func (h *UsersHTTPHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 
 	username, password, repeatPassword := domainFromSignUpDTO(request)
 
-	userDomain, err := h.usersService.SignUp(ctx, username, password, repeatPassword)
+	user, err := h.usersService.SignUp(ctx, username, password, repeatPassword)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to create user")
@@ -48,13 +48,24 @@ func (h *UsersHTTPHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	span.SetAttributes(
-		attribute.String("user.id", userDomain.ID.String()),
-		attribute.String("user.username", userDomain.Username),
+		attribute.String("user.id", user.ID.String()),
+		attribute.String("user.username", user.Username),
 	)
 	span.AddEvent("user created")
 
-	// Create session immediately after registration
-	session, err := h.sessionsService.CreateSession(ctx, userDomain.ID)
+	err = h.resourcesService.CreateParentFolder(ctx, user.ID)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to create parent folder")
+		responseHandler.ErrorResponse(err, "failed to create parent folder")
+
+		return
+	}
+
+	span.AddEvent("create parent folder")
+	span.SetStatus(codes.Ok, "parent folder created successfully")
+
+	session, err := h.sessionsService.CreateSession(ctx, user.ID)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "failed to create session")
