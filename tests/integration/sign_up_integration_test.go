@@ -1,4 +1,4 @@
-package users_transport_http
+package integration
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/minio/minio-go/v7"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,7 +24,7 @@ import (
 //  3. Verify HTTP response status and body
 //  4. Verify user record is created in database with hashed password
 //  5. Verify session is created in Redis with correct user association
-//  6. Verify session cookie is set with proper security attributes
+//  6. Verify user root folder was created in MinIO
 func TestSignUp_SuccessfulRegistration(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -119,12 +120,32 @@ func TestSignUp_SuccessfulRegistration(t *testing.T) {
 	assert.Less(t, sessionExpirationDiff, 5*time.Second,
 		"session expiration should match configured TTL (24h)")
 
+	// Step: 6: Verify user root folder was created in MinIO
+	rootFolderKey := fmt.Sprintf("user-%s-files/", user.ID.String())
+	objInfo, err := tc.minioClient.StatObject(
+		ctx,
+		tc.minioClient.BucketName(),
+		rootFolderKey,
+		minio.StatObjectOptions{},
+	)
+	require.NoError(t, err, "user root folder should exist in MinIO")
+	assert.Equal(t, rootFolderKey, objInfo.Key, "folder key should match user root prefix")
+	assert.Equal(t, int64(0), objInfo.Size, "root folder marker should be 0 bytes")
+
 	// Cleanup: Delete test data
 	err = deleteAllUsers(ctx, tc.pgPool, tc.testID)
 	require.NoError(t, err, "failed to cleanup users")
 
 	err = deleteAllSessions(ctx, tc.redisClient, tc.testID)
 	require.NoError(t, err, "failed to cleanup sessions")
+
+	err = tc.minioClient.RemoveObject(
+		ctx,
+		tc.minioClient.BucketName(),
+		rootFolderKey,
+		minio.RemoveObjectOptions{},
+	)
+	require.NoError(t, err, "failed to cleanup user root folder in MinIO")
 }
 
 // TestSignUp_DuplicateUsername validates that duplicate username registration is prevented.

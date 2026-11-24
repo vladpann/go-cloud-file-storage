@@ -7,15 +7,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
 	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 	core_errors "github.com/vladpann/go-cloud-file-storage/internal/core/errors"
 )
-
-var tracer = otel.Tracer("github.com/vladpann/go-cloud-file-storage/internal/features/users/repository/postgres")
 
 func (r *UsersRepository) SignUp(
 	ctx context.Context,
@@ -60,7 +57,7 @@ func (r *UsersRepository) SignUp(
 		// Check for unique constraint violation (duplicate username)
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			err = fmt.Errorf("users_repository_postgres - SignUp: %w", core_errors.ErrUserAlreadyExists)
+			err = fmt.Errorf("users_repository_postgres - SignUp: %w", core_errors.ErrAlreadyExists)
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "user already exists")
 			span.SetAttributes(attribute.String("db.error.code", "23505"))

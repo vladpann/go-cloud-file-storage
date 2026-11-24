@@ -27,11 +27,6 @@ func (s *SessionsService) CreateSession(
 		ExpiresAt: time.Now().Add(s.config.Session.TTL),
 	}
 
-	span.SetAttributes(
-		attribute.String("session.id", session.ID.String()),
-		attribute.String("session.expires_at", session.ExpiresAt.Format(time.RFC3339)),
-	)
-
 	session, err := s.sessionsRepository.CreateSession(ctx, session)
 	if err != nil {
 		err = fmt.Errorf("sessions_service - CreateSession - sessionsRepository.CreateSession: %w", err)

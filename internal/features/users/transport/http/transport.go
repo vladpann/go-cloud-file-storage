@@ -6,12 +6,15 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
 
 	"github.com/vladpann/go-cloud-file-storage/config"
 	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 	core_http_middleware "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/middleware"
 	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
 )
+
+var tracer = otel.Tracer("github.com/vladpann/go-cloud-file-storage/internal/features/users/transport/http")
 
 // UsersHTTPHandler handles HTTP requests for user operations
 type UsersHTTPHandler struct {

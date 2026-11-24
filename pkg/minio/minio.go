@@ -3,6 +3,7 @@ package minio
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -10,6 +11,8 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
+
+var ErrAlreadyExists = errors.New("object already exists")
 
 // Client wraps minio.Client with additional functionality.
 type Client struct {
@@ -94,7 +97,15 @@ func (c *Client) CreateFolder(ctx context.Context, folderKey string) error {
 		folderKey += "/"
 	}
 
-	_, err := c.Client.PutObject(
+	exists, err := c.FolderExists(ctx, folderKey)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return fmt.Errorf("%w: %s", ErrAlreadyExists, folderKey)
+	}
+
+	_, err = c.Client.PutObject(
 		ctx,
 		c.bucketName,
 		folderKey,
@@ -109,4 +120,30 @@ func (c *Client) CreateFolder(ctx context.Context, folderKey string) error {
 	}
 
 	return nil
+}
+
+// FolderExists checks whether a folder marker or any object under folderKey exists.
+func (c *Client) FolderExists(ctx context.Context, folderKey string) (bool, error) {
+	if !strings.HasSuffix(folderKey, "/") {
+		folderKey += "/"
+	}
+
+	listCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	opts := minio.ListObjectsOptions{
+		Prefix:    folderKey,
+		Recursive: true,
+		MaxKeys:   1,
+	}
+
+	obj, ok := <-c.ListObjects(listCtx, c.bucketName, opts)
+	if !ok {
+		return false, nil
+	}
+	if obj.Err != nil {
+		return false, fmt.Errorf("failed to check folder %q: %w", folderKey, obj.Err)
+	}
+
+	return true, nil
 }

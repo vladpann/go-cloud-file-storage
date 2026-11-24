@@ -24,7 +24,6 @@ func (r *ResourcesRepository) CreateParentFolder(
 		attribute.String("storage.system", "minio"),
 		attribute.String("storage.operation", "PutObject"),
 		attribute.String("storage.bucket", r.mc.BucketName()),
-		attribute.String("storage.key", key),
 	)
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)

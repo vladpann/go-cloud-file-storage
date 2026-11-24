@@ -51,9 +51,9 @@ func (h *HTTPResponseHandler) ErrorResponse(err error, msg string) {
 		statusCode = http.StatusUnauthorized
 		publicErr = core_errors.ErrInvalidCredentials.Error()
 		h.l.Warn(msg, err)
-	case errors.Is(err, core_errors.ErrUserAlreadyExists):
+	case errors.Is(err, core_errors.ErrAlreadyExists):
 		statusCode = http.StatusConflict
-		publicErr = core_errors.ErrUserAlreadyExists.Error()
+		publicErr = core_errors.ErrAlreadyExists.Error()
 		h.l.Warn(msg, err)
 	case errors.Is(err, core_errors.ErrInvalidArgument):
 		statusCode = http.StatusBadRequest

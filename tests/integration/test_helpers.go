@@ -1,4 +1,4 @@
-package users_transport_http
+package integration
 
 import (
 	"bytes"
@@ -18,13 +18,18 @@ import (
 
 	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 	user_service "github.com/vladpann/go-cloud-file-storage/internal/features/users/service"
+	users_transport_http "github.com/vladpann/go-cloud-file-storage/internal/features/users/transport/http"
+)
+
+var (
+	sessionCookieName = "session_id"
 )
 
 // Request Building Helpers
 
 // buildSignUpRequest creates a sign-up request payload with the given credentials.
-func buildSignUpRequest(username, password, repeatPassword string) SignUpRequest {
-	return SignUpRequest{
+func buildSignUpRequest(username, password, repeatPassword string) users_transport_http.SignUpRequest {
+	return users_transport_http.SignUpRequest{
 		Username:       username,
 		Password:       password,
 		RepeatPassword: repeatPassword,
@@ -32,7 +37,7 @@ func buildSignUpRequest(username, password, repeatPassword string) SignUpRequest
 }
 
 // sendSignUpRequest sends HTTP POST request to sign-up endpoint and returns response.
-func sendSignUpRequest(t *testing.T, handler http.Handler, req SignUpRequest) *httptest.ResponseRecorder {
+func sendSignUpRequest(t *testing.T, handler http.Handler, req users_transport_http.SignUpRequest) *httptest.ResponseRecorder {
 	t.Helper()
 
 	body, err := json.Marshal(req)
@@ -48,15 +53,15 @@ func sendSignUpRequest(t *testing.T, handler http.Handler, req SignUpRequest) *h
 }
 
 // buildSignInRequest creates a sign-in request payload with the given credentials.
-func buildSignInRequest(username, password string) SignInRequest {
-	return SignInRequest{
+func buildSignInRequest(username, password string) users_transport_http.SignInRequest {
+	return users_transport_http.SignInRequest{
 		Username: username,
 		Password: password,
 	}
 }
 
 // sendSignInRequest sends HTTP POST request to sign-in endpoint and returns response.
-func sendSignInRequest(t *testing.T, handler http.Handler, req SignInRequest) *httptest.ResponseRecorder {
+func sendSignInRequest(t *testing.T, handler http.Handler, req users_transport_http.SignInRequest) *httptest.ResponseRecorder {
 	t.Helper()
 
 	body, err := json.Marshal(req)
@@ -119,10 +124,10 @@ func sendRawSignInRequest(t *testing.T, handler http.Handler, body string) *http
 // Response Parsing Helpers
 
 // parseSignUpResponse parses JSON response body into SignUpResponse struct.
-func parseSignUpResponse(t *testing.T, response *httptest.ResponseRecorder) SignUpResponse {
+func parseSignUpResponse(t *testing.T, response *httptest.ResponseRecorder) users_transport_http.SignUpResponse {
 	t.Helper()
 
-	var signUpResponse SignUpResponse
+	var signUpResponse users_transport_http.SignUpResponse
 	err := json.NewDecoder(response.Body).Decode(&signUpResponse)
 	require.NoError(t, err, "failed to decode sign-up response")
 
@@ -130,10 +135,10 @@ func parseSignUpResponse(t *testing.T, response *httptest.ResponseRecorder) Sign
 }
 
 // parseSignInResponse parses JSON response body into SignInResponse struct.
-func parseSignInResponse(t *testing.T, response *httptest.ResponseRecorder) SignInResponse {
+func parseSignInResponse(t *testing.T, response *httptest.ResponseRecorder) users_transport_http.SignInResponse {
 	t.Helper()
 
-	var signInResponse SignInResponse
+	var signInResponse users_transport_http.SignInResponse
 	err := json.NewDecoder(response.Body).Decode(&signInResponse)
 	require.NoError(t, err, "failed to decode sign-up response")
 

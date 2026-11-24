@@ -45,3 +45,10 @@ func signInResponseFromDomain(user domain.User) SignInResponse {
 		Username: user.Username,
 	}
 }
+
+// meResponseFromDomain converts a domain user into the me response DTO
+func meResponseFromDomain(user domain.User) MeResponse {
+	return MeResponse{
+		Username: user.Username,
+	}
+}
