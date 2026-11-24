@@ -2,7 +2,6 @@ package users_transport_http
 
 import (
 	"net/http"
-	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -12,7 +11,7 @@ import (
 	core_http_response "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/response"
 )
 
-// SignIn handles user authentication
+// SignIn handler user authentication
 func (h *UsersHTTPHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	ctx, span := tracer.Start(ctx, "UsersHTTPHandler.SignIn")
@@ -56,10 +55,6 @@ func (h *UsersHTTPHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	span.SetAttributes(
-		attribute.String("session.id", session.ID.String()),
-		attribute.String("session.expires_at", session.ExpiresAt.Format(time.RFC3339)),
-	)
 	span.AddEvent("session created")
 
 	// Set session cookie

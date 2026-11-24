@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/otel"
 
 	"github.com/vladpann/go-cloud-file-storage/config"
+	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 )
 
 var tracer = otel.Tracer("github.com/vladpann/go-cloud-file-storage/internal/features/resources/service")
@@ -20,6 +21,12 @@ type ResourcesRepository interface {
 	CreateParentFolder(
 		ctx context.Context,
 		userID uuid.UUID,
+	) error
+
+	CreateFolder(
+		ctx context.Context,
+		userID uuid.UUID,
+		dir domain.Resource,
 	) error
 }
 

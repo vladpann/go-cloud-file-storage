@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
 	core_errors "github.com/vladpann/go-cloud-file-storage/internal/core/errors"
@@ -12,7 +11,7 @@ import (
 	core_http_response "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/response"
 )
 
-// SignOut handles user logout by deleting the session
+// SignOut handler user logout by deleting the session
 func (h *UsersHTTPHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	ctx, span := tracer.Start(ctx, "UsersHTTPHandler.SignOut")
@@ -29,8 +28,6 @@ func (h *UsersHTTPHandler) SignOut(w http.ResponseWriter, r *http.Request) {
 		responseHandler.ErrorResponse(err, "invalid session ID")
 		return
 	}
-
-	span.SetAttributes(attribute.String("session.id", sessionID.String()))
 
 	// Delete session from repository
 	if err := h.sessionsService.DeleteSession(ctx, sessionID); err != nil {

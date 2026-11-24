@@ -6,8 +6,10 @@ import (
 )
 
 var (
-	ErrInvalidPath = errors.New("invalid or missing path")
-	ErrInvalidSize = errors.New("file size cannot be negative")
+	ErrInvalidPath           = errors.New("invalid or missing path")
+	ErrInvalidSize           = errors.New("file size cannot be negative")
+	ErrResourceAlreadyExists = errors.New("resource already exists")
+	ErrResourceNotFound      = errors.New("resource not found")
 )
 
 type ResourceType string
@@ -65,14 +67,6 @@ func (r Resource) FullPath() string {
 		return r.Path + r.Name + "/"
 	}
 	return r.Path + r.Name
-}
-
-func (t ResourceType) IsValid() bool {
-	return t == ResourceTypeFile || t == ResourceTypeDirectory
-}
-
-func (r Resource) IsDir() bool {
-	return r.Type == ResourceTypeDirectory
 }
 
 func validateParentPath(p string) error {

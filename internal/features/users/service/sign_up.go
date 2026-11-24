@@ -4,15 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
 	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 	core_errors "github.com/vladpann/go-cloud-file-storage/internal/core/errors"
 )
-
-var tracer = otel.Tracer("github.com/vladpann/go-cloud-file-storage/internal/features/users/service")
 
 func (s *UsersService) SignUp(
 	ctx context.Context,

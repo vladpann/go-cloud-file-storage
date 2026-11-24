@@ -7,12 +7,13 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
+	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 	core_errors "github.com/vladpann/go-cloud-file-storage/internal/core/errors"
 	core_http_middleware "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/middleware"
 	core_http_response "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/response"
 )
 
-// Me handles return username
+// Me handler return username
 func (h *UsersHTTPHandler) Me(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	ctx, span := tracer.Start(ctx, "UsersHTTPHandler.Me")
@@ -44,9 +45,9 @@ func (h *UsersHTTPHandler) Me(w http.ResponseWriter, r *http.Request) {
 	span.AddEvent("username found")
 	span.SetStatus(codes.Ok, "username successful")
 
-	response := MeResponse{
+	response := meResponseFromDomain(domain.User{
 		Username: username,
-	}
+	})
 
 	responseHandler.JSONResponse(response, http.StatusOK)
 }

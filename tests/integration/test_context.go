@@ -1,4 +1,4 @@
-package users_transport_http
+package integration
 
 import (
 	"context"
@@ -31,6 +31,7 @@ import (
 	sessions_service "github.com/vladpann/go-cloud-file-storage/internal/features/sessions/service"
 	users_repository_postgres "github.com/vladpann/go-cloud-file-storage/internal/features/users/repository/postgres"
 	user_service "github.com/vladpann/go-cloud-file-storage/internal/features/users/service"
+	users_transport_http "github.com/vladpann/go-cloud-file-storage/internal/features/users/transport/http"
 	"github.com/vladpann/go-cloud-file-storage/internal/testutil"
 	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
 	"github.com/vladpann/go-cloud-file-storage/pkg/minio"
@@ -73,7 +74,7 @@ type TestContext struct {
 	resourcesService *resources_service.ResourcesService
 
 	// Handler and Router
-	httpHandler *UsersHTTPHandler
+	httpHandler *users_transport_http.UsersHTTPHandler
 	router      http.Handler
 
 	// Test metadata
@@ -243,7 +244,7 @@ func NewTestContext(ctx context.Context) (*TestContext, error) {
 	authMiddleware := core_http_middleware.Auth(tc.logger, tc.sessionsService)
 
 	// Initialize HTTP handler
-	tc.httpHandler = NewUsersHTTPHandler(
+	tc.httpHandler = users_transport_http.NewUsersHTTPHandler(
 		tc.usersService,
 		tc.sessionsService,
 		tc.resourcesService,

@@ -4,9 +4,12 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
 
 	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 )
+
+var tracer = otel.Tracer("github.com/vladpann/go-cloud-file-storage/internal/features/users/service")
 
 type PasswordHasher interface {
 	Hash(password string) ([]byte, error)

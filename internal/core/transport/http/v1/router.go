@@ -22,4 +22,10 @@ func NewRoutes(apiV1Group chi.Router, v1Transports *V1, l logger.Interface) {
 	apiV1Group.Route("/user", func(r chi.Router) {
 		r.With(v1Transports.Users.AuthMiddleware()).Get("/me", v1Transports.Users.Me)
 	})
+
+	// Resource routes
+	apiV1Group.Group(func(r chi.Router) {
+		r.Use(v1Transports.Users.AuthMiddleware())
+		r.Post("/directory", v1Transports.Resources.CreateEmptyFolder)
+	})
 }

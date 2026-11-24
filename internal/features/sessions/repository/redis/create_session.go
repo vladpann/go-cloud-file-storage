@@ -23,7 +23,6 @@ func (r *SessionsRepository) CreateSession(
 	defer span.End()
 
 	span.SetAttributes(
-		attribute.String("session.id", session.ID.String()),
 		attribute.String("user.id", session.UserID.String()),
 		attribute.String("db.system", "redis"),
 		attribute.String("db.operation", "SET"),
@@ -52,7 +51,6 @@ func (r *SessionsRepository) CreateSession(
 	}
 
 	key := sessionKey(session.ID)
-	span.SetAttributes(attribute.String("redis.key", key))
 	span.AddEvent("setting session in Redis")
 
 	if err := r.rdb.Client.Set(ctx, key, data, ttl).Err(); err != nil {

@@ -16,6 +16,7 @@ import (
 	core_http_v1 "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/v1"
 	resources_repository_minio "github.com/vladpann/go-cloud-file-storage/internal/features/resources/repository/minio"
 	resources_service "github.com/vladpann/go-cloud-file-storage/internal/features/resources/service"
+	resources_transport_http "github.com/vladpann/go-cloud-file-storage/internal/features/resources/transport/http"
 	sessions_repository_redis "github.com/vladpann/go-cloud-file-storage/internal/features/sessions/repository/redis"
 	sessions_service "github.com/vladpann/go-cloud-file-storage/internal/features/sessions/service"
 	users_repository_postgres "github.com/vladpann/go-cloud-file-storage/internal/features/users/repository/postgres"
@@ -74,7 +75,14 @@ func initV1HTTPHandlers(cfg *config.Config, feat features, l logger.Interface) *
 		v,
 	)
 
-	return core_http_v1.NewV1(usersTransport, l)
+	resourcesTransport := resources_transport_http.NewResourcesHTTPHandler(
+		feat.resources,
+		cfg,
+		l,
+		v,
+	)
+
+	return core_http_v1.NewV1(usersTransport, resourcesTransport, l)
 }
 
 func initServers(cfg *config.Config, v1Transports *core_http_v1.V1, l logger.Interface) servers {
