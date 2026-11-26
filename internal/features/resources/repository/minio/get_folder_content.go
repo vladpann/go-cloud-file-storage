@@ -74,7 +74,7 @@ func (r *ResourcesRepository) GetFolderContent(
 
 	span.SetStatus(codes.Ok, "folder content listed from MinIO")
 
-	infoFolderContent := resourceDomainsFromModel(resources)
+	folderContent := resourceDomainsFromModel(resources)
 
-	return infoFolderContent, nil
+	return folderContent, nil
 }

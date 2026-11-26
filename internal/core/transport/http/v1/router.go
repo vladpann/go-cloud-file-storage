@@ -28,5 +28,6 @@ func NewRoutes(apiV1Group chi.Router, v1Transports *V1, l logger.Interface) {
 		r.Use(v1Transports.Users.AuthMiddleware())
 		r.Post("/directory", v1Transports.Resources.CreateEmptyFolder)
 		r.Get("/directory", v1Transports.Resources.GetFolderContent)
+		r.Post("/resource", v1Transports.Resources.UploadResource)
 	})
 }

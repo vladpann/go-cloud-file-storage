@@ -197,3 +197,47 @@ func (c *Client) FolderContent(ctx context.Context, folderKey string) ([]minio.O
 
 	return objects, nil
 }
+
+// ObjectExists checks whether an object with exact objectKey exists in the bucket.
+func (c *Client) ObjectExists(ctx context.Context, objectKey string) (bool, error) {
+	_, err := c.StatObject(ctx, c.bucketName, objectKey, minio.StatObjectOptions{})
+	if err != nil {
+		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to stat object %q: %w", objectKey, err)
+	}
+
+	return true, nil
+}
+
+// EnsureFolderExists creates a zero-byte folder marker if it does not already exist.
+func (c *Client) EnsureFolderExists(ctx context.Context, folderKey string) error {
+	if !strings.HasSuffix(folderKey, "/") {
+		folderKey += "/"
+	}
+
+	exists, err := c.FolderExists(ctx, folderKey)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+
+	_, err = c.Client.PutObject(
+		ctx,
+		c.bucketName,
+		folderKey,
+		bytes.NewReader(nil),
+		0,
+		minio.PutObjectOptions{
+			ContentType: "application/x-directory",
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create folder %q: %w", folderKey, err)
+	}
+
+	return nil
+}

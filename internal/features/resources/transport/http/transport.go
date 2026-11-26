@@ -34,6 +34,13 @@ type ResourcesService interface {
 		userID uuid.UUID,
 		rawPath string,
 	) ([]domain.Resource, error)
+
+	UploadResource(
+		ctx context.Context,
+		userID uuid.UUID,
+		rawPath string,
+		uploads []domain.UploadFile,
+	) ([]domain.Resource, error)
 }
 
 func NewResourcesHTTPHandler(

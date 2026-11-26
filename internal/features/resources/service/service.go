@@ -34,6 +34,13 @@ type ResourcesRepository interface {
 		userID uuid.UUID,
 		dir string,
 	) ([]domain.Resource, error)
+
+	UploadResource(
+		ctx context.Context,
+		userID uuid.UUID,
+		dir string,
+		uploads []domain.UploadFile,
+	) ([]domain.Resource, error)
 }
 
 func New(

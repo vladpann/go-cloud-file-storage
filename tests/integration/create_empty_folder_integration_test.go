@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 
 	"github.com/minio/minio-go/v7"
@@ -19,31 +18,6 @@ type createEmptyFolderTestResponse struct {
 	Name string `json:"name"`
 	Size *int64 `json:"size,omitempty"`
 	Type string `json:"type"`
-}
-
-func sendCreateEmptyFolderRequest(
-	t *testing.T,
-	router http.Handler,
-	rawPath string,
-	includePathParam bool,
-	sessionCookie *http.Cookie,
-) *httptest.ResponseRecorder {
-	t.Helper()
-
-	target := "/api/v1/directory"
-	if includePathParam {
-		target += "?path=" + url.QueryEscape(rawPath)
-	}
-
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, target, http.NoBody)
-	if sessionCookie != nil {
-		req.AddCookie(sessionCookie)
-	}
-
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	return rec
 }
 
 func parseCreateEmptyFolderResponse(t *testing.T, resp *httptest.ResponseRecorder) createEmptyFolderTestResponse {
