@@ -79,9 +79,11 @@ linters:
 
   exclusions:
     generated: lax
+    paths:
+      - ^tests?/integration/
     rules:
       # Exclude some linters from running on tests files
-      - path: (_test\.go|test_helpers\.go|test_context\.go|internal/testutil/)
+      - path: (_test\.go|test_helpers\.go|test_context\.go)
         linters:
           - gocyclo
           - errcheck

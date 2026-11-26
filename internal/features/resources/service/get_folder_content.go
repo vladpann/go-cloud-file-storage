@@ -21,29 +21,14 @@ func (s *ResourcesService) GetFolderContent(
 
 	span.SetAttributes(attribute.String("user.id", userID.String()))
 
-	var dir string
-	if rawPath != "" && rawPath != "/" {
-		parentPath, name, resType, err := domain.ParseResourcePath(rawPath)
-		if err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "invalid or missing path")
-			return nil, err
-		}
-
-		if resType != domain.ResourceTypeDirectory {
-			err = fmt.Errorf(
-				"resources_service - domain.ResourceTypeDirectory: %w",
-				domain.ErrInvalidPath,
-			)
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "invalid or missing path")
-			return nil, domain.ErrInvalidPath
-		}
-
-		dir = parentPath + name + "/"
+	targetDir, err := domain.ParseTargetDirectory(rawPath)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "invalid target directory path")
+		return nil, err
 	}
 
-	resources, err := s.resourcesRepository.GetFolderContent(ctx, userID, dir)
+	resources, err := s.resourcesRepository.GetFolderContent(ctx, userID, targetDir)
 	if err != nil {
 		err = fmt.Errorf(
 			"resources_service - GetFolderContent - resourcesRepository.GetFolderContent: %w",

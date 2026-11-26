@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/google/uuid"
@@ -15,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
+	resources_transport_http "github.com/vladpann/go-cloud-file-storage/internal/features/resources/transport/http"
 
 	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
 	user_service "github.com/vladpann/go-cloud-file-storage/internal/features/users/service"
@@ -121,6 +123,56 @@ func sendRawSignInRequest(t *testing.T, handler http.Handler, body string) *http
 	return recorder
 }
 
+func sendGetFolderContentRequest(
+	t *testing.T,
+	router http.Handler,
+	rawPath string,
+	includePathParam bool,
+	sessionCookie *http.Cookie,
+) *httptest.ResponseRecorder {
+	t.Helper()
+
+	target := "/api/v1/directory"
+	if includePathParam {
+		target += "?path=" + url.QueryEscape(rawPath)
+	}
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, target, http.NoBody)
+	if sessionCookie != nil {
+		req.AddCookie(sessionCookie)
+	}
+
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	return rec
+}
+
+func sendCreateEmptyFolderRequest(
+	t *testing.T,
+	router http.Handler,
+	rawPath string,
+	includePathParam bool,
+	sessionCookie *http.Cookie,
+) *httptest.ResponseRecorder {
+	t.Helper()
+
+	target := "/api/v1/directory"
+	if includePathParam {
+		target += "?path=" + url.QueryEscape(rawPath)
+	}
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, target, http.NoBody)
+	if sessionCookie != nil {
+		req.AddCookie(sessionCookie)
+	}
+
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	return rec
+}
+
 // Response Parsing Helpers
 
 // parseSignUpResponse parses JSON response body into SignUpResponse struct.
@@ -143,6 +195,16 @@ func parseSignInResponse(t *testing.T, response *httptest.ResponseRecorder) user
 	require.NoError(t, err, "failed to decode sign-up response")
 
 	return signInResponse
+}
+
+func parseFolderContentResponse(t *testing.T, resp *httptest.ResponseRecorder) []resources_transport_http.GetFolderContentResponse {
+	t.Helper()
+
+	var items []resources_transport_http.GetFolderContentResponse
+	err := json.Unmarshal(resp.Body.Bytes(), &items)
+	require.NoError(t, err, "failed to unmarshal folder content response: %s", resp.Body.String())
+
+	return items
 }
 
 // extractSessionCookie extracts session cookie from HTTP response.

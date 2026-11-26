@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"io"
 	"strings"
 )
 
@@ -24,6 +25,13 @@ type Resource struct {
 	Name string
 	Size *int64
 	Type ResourceType
+}
+
+type UploadFile struct {
+	RelativePath string
+	Size         int64
+	ContentType  string
+	Reader       io.Reader
 }
 
 func NewFile(parentPath, name string, size int64) (Resource, error) {
@@ -119,4 +127,23 @@ func ParseResourcePath(rawPath string) (
 		return "", rawPath, resType, nil
 	}
 	return rawPath[:idx+1], rawPath[idx+1:], resType, nil
+}
+
+// ParseTargetDirectory parses a directory path where "" or "/" means root,
+// and any other path must be a valid directory ending with "/".
+// Returns normalized path: "" for root or "folder1/folder2/".
+func ParseTargetDirectory(rawPath string) (string, error) {
+	if rawPath == "" || rawPath == "/" {
+		return "", nil
+	}
+
+	parentPath, name, resType, err := ParseResourcePath(rawPath)
+	if err != nil {
+		return "", err
+	}
+	if resType != ResourceTypeDirectory {
+		return "", ErrInvalidPath
+	}
+
+	return parentPath + name + "/", nil
 }

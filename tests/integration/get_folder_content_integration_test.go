@@ -5,57 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vladpann/go-cloud-file-storage/internal/core/domain"
+
+	resources_transport_http "github.com/vladpann/go-cloud-file-storage/internal/features/resources/transport/http"
 )
-
-type folderContentItemResponse struct {
-	Path string `json:"path"`
-	Name string `json:"name"`
-	Size *int64 `json:"size,omitempty"`
-	Type string `json:"type"`
-}
-
-func sendGetFolderContentRequest(
-	t *testing.T,
-	router http.Handler,
-	rawPath string,
-	includePathParam bool,
-	sessionCookie *http.Cookie,
-) *httptest.ResponseRecorder {
-	t.Helper()
-
-	target := "/api/v1/directory"
-	if includePathParam {
-		target += "?path=" + url.QueryEscape(rawPath)
-	}
-
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, target, http.NoBody)
-	if sessionCookie != nil {
-		req.AddCookie(sessionCookie)
-	}
-
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-
-	return rec
-}
-
-func parseFolderContentResponse(t *testing.T, resp *httptest.ResponseRecorder) []folderContentItemResponse {
-	t.Helper()
-
-	var items []folderContentItemResponse
-	err := json.Unmarshal(resp.Body.Bytes(), &items)
-	require.NoError(t, err, "failed to unmarshal folder content response: %s", resp.Body.String())
-
-	return items
-}
 
 func putTestFileInMinIO(
 	t *testing.T,
@@ -159,24 +118,24 @@ func TestGetFolderContent_RootNonRecursive(t *testing.T) {
 	items := parseFolderContentResponse(t, resp)
 	require.Len(t, items, 4, "should return only direct children of root")
 
-	byName := make(map[string]folderContentItemResponse, len(items))
+	byName := make(map[string]resources_transport_http.GetFolderContentResponse, len(items))
 	for _, item := range items {
 		byName[item.Name] = item
 	}
 
-	assert.Equal(t, folderContentItemResponse{Path: "", Name: "folder1", Type: "DIRECTORY"}, byName["folder1"])
-	assert.Equal(t, folderContentItemResponse{Path: "", Name: "folder2", Type: "DIRECTORY"}, byName["folder2"])
+	assert.Equal(t, resources_transport_http.GetFolderContentResponse{Path: "", Name: "folder1", Type: "DIRECTORY"}, byName["folder1"])
+	assert.Equal(t, resources_transport_http.GetFolderContentResponse{Path: "", Name: "folder2", Type: "DIRECTORY"}, byName["folder2"])
 
 	helloFile, ok := byName["hello.txt"]
 	require.True(t, ok)
 	assert.Equal(t, "", helloFile.Path)
-	assert.Equal(t, "FILE", helloFile.Type)
+	assert.Equal(t, domain.ResourceType("FILE"), helloFile.Type)
 	require.NotNil(t, helloFile.Size)
 	assert.Equal(t, int64(11), *helloFile.Size)
 
 	emptyFile, ok := byName["empty.txt"]
 	require.True(t, ok)
-	assert.Equal(t, "FILE", emptyFile.Type)
+	assert.Equal(t, domain.ResourceType("FILE"), emptyFile.Type)
 	require.NotNil(t, emptyFile.Size, "0-byte file must include size field")
 	assert.Equal(t, int64(0), *emptyFile.Size)
 
@@ -237,12 +196,12 @@ func TestGetFolderContent_NestedFolder(t *testing.T) {
 		items := parseFolderContentResponse(t, resp)
 		require.Len(t, items, 2)
 
-		byName := make(map[string]folderContentItemResponse, len(items))
+		byName := make(map[string]resources_transport_http.GetFolderContentResponse, len(items))
 		for _, item := range items {
 			byName[item.Name] = item
 		}
 
-		assert.Equal(t, folderContentItemResponse{
+		assert.Equal(t, resources_transport_http.GetFolderContentResponse{
 			Path: "folder1/folder2/",
 			Name: "sub",
 			Type: "DIRECTORY",
@@ -250,7 +209,7 @@ func TestGetFolderContent_NestedFolder(t *testing.T) {
 
 		fileItem := byName["file.txt"]
 		assert.Equal(t, "folder1/folder2/", fileItem.Path)
-		assert.Equal(t, "FILE", fileItem.Type)
+		assert.Equal(t, domain.ResourceType("FILE"), fileItem.Type)
 		require.NotNil(t, fileItem.Size)
 		assert.Equal(t, int64(5), *fileItem.Size)
 	})

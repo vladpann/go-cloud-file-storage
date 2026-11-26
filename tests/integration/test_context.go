@@ -602,6 +602,7 @@ func generateTestID() string {
 //   - GET  /api/v1/user/me (protected)
 //   - POST /api/v1/directory?path=$path (protected)
 //   - GET  /api/v1/directory?path=$path (protected)
+//   - POST /api/v1/resource?path=$path (protected)
 func (tc *TestContext) setupTestRouter() http.Handler {
 	r := chi.NewRouter()
 
@@ -627,6 +628,7 @@ func (tc *TestContext) setupTestRouter() http.Handler {
 			r.Use(tc.userHTTPHandler.AuthMiddleware())
 			r.Post("/directory", tc.resourceHTTPHandler.CreateEmptyFolder)
 			r.Get("/directory", tc.resourceHTTPHandler.GetFolderContent)
+			r.Post("/resource", tc.resourceHTTPHandler.UploadResource)
 		})
 	})
 

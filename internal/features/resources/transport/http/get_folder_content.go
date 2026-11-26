@@ -52,14 +52,14 @@ func (h *ResourcesHTTPHandler) GetFolderContent(w http.ResponseWriter, r *http.R
 			responseHandler.ErrorResponse(err, "folder not found")
 		default:
 			span.RecordError(err)
-			span.SetStatus(codes.Error, "failed to get info folder content")
-			responseHandler.ErrorResponse(err, "failed to get info folder content")
+			span.SetStatus(codes.Error, "failed to get folder content")
+			responseHandler.ErrorResponse(err, "failed to get folder content")
 		}
 		return
 	}
 
-	span.AddEvent("info folder content got")
-	span.SetStatus(codes.Ok, "get info folder content successful")
+	span.AddEvent("folder content got")
+	span.SetStatus(codes.Ok, "get folder content successful")
 
 	response := getFolderContentResponseFromDomain(resources)
 
