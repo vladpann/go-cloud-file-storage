@@ -22,7 +22,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"github.com/vladpann/go-cloud-file-storage/tests"
 
 	"github.com/vladpann/go-cloud-file-storage/config"
 	core_http_middleware "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/middleware"
@@ -38,6 +37,7 @@ import (
 	"github.com/vladpann/go-cloud-file-storage/pkg/minio"
 	"github.com/vladpann/go-cloud-file-storage/pkg/postgres"
 	pkg_redis "github.com/vladpann/go-cloud-file-storage/pkg/redis"
+	"github.com/vladpann/go-cloud-file-storage/tests"
 )
 
 // migrationMutex ensures that goose migrations are applied sequentially
