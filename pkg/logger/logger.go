@@ -29,7 +29,6 @@ type Interface interface {
 	// GetZerolog returns the underlying zerolog.Logger for advanced use
 	GetZerolog() *zerolog.Logger
 }
-
 type Logger struct {
 	logger *zerolog.Logger
 	lg     *lumberjack.Logger
