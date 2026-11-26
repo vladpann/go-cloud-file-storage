@@ -14,7 +14,7 @@ import (
 	pkgminio "github.com/vladpann/go-cloud-file-storage/pkg/minio"
 )
 
-func (r *ResourcesRepository) CreateFolder(
+func (r *ResourcesRepository) CreateEmptyFolder(
 	ctx context.Context,
 	userID uuid.UUID,
 	dir domain.Resource,
@@ -33,6 +33,22 @@ func (r *ResourcesRepository) CreateFolder(
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
+	if dir.Path != "" {
+		parentKey := userRootFolderKey(userID) + dir.Path
+
+		exists, err := r.mc.FolderExists(ctx, parentKey)
+		if err != nil {
+			err = fmt.Errorf("minio check parent folder %q: %w", parentKey, err)
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "failed to check parent folder in MinIO")
+			return err
+		}
+		if !exists {
+			span.SetStatus(codes.Error, "parent folder not found")
+			return domain.ErrResourceNotFound
+		}
+	}
 
 	if err := r.mc.CreateFolder(ctx, key); err != nil {
 		if errors.Is(err, pkgminio.ErrAlreadyExists) {

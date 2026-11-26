@@ -44,6 +44,9 @@ fix-diff: ### Show code changes by `go fix`
 .PHONY: fix-diff
 
 MODULE ?= github.com/vladpann/go-cloud-file-storage
+COVERAGE_PKGS         ?= ./internal/...,./pkg/...
+UNIT_TEST_PKGS        ?= ./internal/... ./pkg/...
+INTEGRATION_TEST_PKGS ?= ./tests/integration/...
 
 format: ### Run code formatter
 	@command -v gofumpt >/dev/null 2>&1 || { echo "gofumpt not found. Installing..."; go install mvdan.cc/gofumpt@latest; }
@@ -80,12 +83,27 @@ linter-dotenv: ### check by dotenv linter
 	@dotenv-linter
 .PHONY: linter-dotenv
 
-test: ### run test and generate HTML coverage report
-	@go test -v -race -covermode atomic -coverprofile=coverage.out ./internal/... ./pkg/...
-	@go tool cover -html=coverage.out -o coverage.html
-	@echo "Coverage report generated: coverage.html"
-	@rm coverage.out
+test: ### run all tests (unit + integration) and generate HTML coverage report
+	@rm -f coverage.out
+	@go test -v -race -covermode=atomic -coverpkg=$(COVERAGE_PKGS) -coverprofile=coverage.out $(UNIT_TEST_PKGS) $(INTEGRATION_TEST_PKGS) && \
+		go tool cover -html=coverage.out -o coverage.html && \
+		go tool cover -func=coverage.out | tail -n 1 && \
+		echo "Coverage report generated: coverage.html"; \
+		rm -f coverage.out
 .PHONY: test
+
+test-unit: ### run unit tests only
+	@go test -v -race $(UNIT_TEST_PKGS)
+.PHONY: test-unit
+
+test-integration: ### run integration tests and generate HTML coverage report
+	@rm -f coverage.out
+	@go test -v -race -covermode=atomic -coverpkg=$(COVERAGE_PKGS) -coverprofile=coverage.out $(INTEGRATION_TEST_PKGS) && \
+		go tool cover -html=coverage.out -o coverage.html && \
+		go tool cover -func=coverage.out | tail -n 1 && \
+		echo "Coverage report generated: coverage.html"; \
+		rm -f coverage.out
+.PHONY: test-integration
 
 MIGRATIONS_DIR ?= migrations
 GOOSE_DB       ?= postgres '$(PG_URL)?sslmode=disable'

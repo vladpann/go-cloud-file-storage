@@ -22,17 +22,18 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"github.com/vladpann/go-cloud-file-storage/tests"
 
 	"github.com/vladpann/go-cloud-file-storage/config"
 	core_http_middleware "github.com/vladpann/go-cloud-file-storage/internal/core/transport/http/middleware"
 	resources_repository_minio "github.com/vladpann/go-cloud-file-storage/internal/features/resources/repository/minio"
 	resources_service "github.com/vladpann/go-cloud-file-storage/internal/features/resources/service"
+	resources_transport_http "github.com/vladpann/go-cloud-file-storage/internal/features/resources/transport/http"
 	sessions_repository_redis "github.com/vladpann/go-cloud-file-storage/internal/features/sessions/repository/redis"
 	sessions_service "github.com/vladpann/go-cloud-file-storage/internal/features/sessions/service"
 	users_repository_postgres "github.com/vladpann/go-cloud-file-storage/internal/features/users/repository/postgres"
 	user_service "github.com/vladpann/go-cloud-file-storage/internal/features/users/service"
 	users_transport_http "github.com/vladpann/go-cloud-file-storage/internal/features/users/transport/http"
-	"github.com/vladpann/go-cloud-file-storage/internal/testutil"
 	"github.com/vladpann/go-cloud-file-storage/pkg/logger"
 	"github.com/vladpann/go-cloud-file-storage/pkg/minio"
 	"github.com/vladpann/go-cloud-file-storage/pkg/postgres"
@@ -74,8 +75,9 @@ type TestContext struct {
 	resourcesService *resources_service.ResourcesService
 
 	// Handler and Router
-	httpHandler *users_transport_http.UsersHTTPHandler
-	router      http.Handler
+	userHTTPHandler     *users_transport_http.UsersHTTPHandler
+	resourceHTTPHandler *resources_transport_http.ResourcesHTTPHandler
+	router              http.Handler
 
 	// Test metadata
 	testID     string
@@ -202,7 +204,7 @@ func NewTestContext(ctx context.Context) (*TestContext, error) {
 	tc.minioClient = minioClient
 
 	// Create test configuration
-	tc.config = testutil.NewTestConfig(pgConnString, redisAddr, redisPassword, minioAccessKey, minioSecretKey)
+	tc.config = tests.NewTestConfig(pgConnString, redisAddr, redisPassword, minioAccessKey, minioSecretKey)
 
 	// Initialize logger
 	testLogger, err := logger.New(tc.config.Log.Level, tc.config.Log.Folder)
@@ -244,11 +246,18 @@ func NewTestContext(ctx context.Context) (*TestContext, error) {
 	authMiddleware := core_http_middleware.Auth(tc.logger, tc.sessionsService)
 
 	// Initialize HTTP handler
-	tc.httpHandler = users_transport_http.NewUsersHTTPHandler(
+	tc.userHTTPHandler = users_transport_http.NewUsersHTTPHandler(
 		tc.usersService,
 		tc.sessionsService,
 		tc.resourcesService,
 		authMiddleware,
+		tc.config,
+		tc.logger,
+		tc.validator,
+	)
+
+	tc.resourceHTTPHandler = resources_transport_http.NewResourcesHTTPHandler(
+		tc.resourcesService,
 		tc.config,
 		tc.logger,
 		tc.validator,
@@ -493,9 +502,9 @@ func (tc *TestContext) startMinioContainer(ctx context.Context) (container testc
 }
 
 // getMigrationsPath locates the migrations directory relative to the test file location.
-// It uses runtime.Caller to determine the current file path and navigates up to the project root.
+// It uses runtime.Caller to determine the current file path and walks up to the project root (go.mod).
 // The migrations directory is expected at: <project_root>/migrations
-// Returns error if migrations directory does not exist.
+// Returns error if project root or migrations directory does not exist.
 func getMigrationsPath() (string, error) {
 	// Get the current file path using runtime.Caller
 	_, filename, _, ok := runtime.Caller(0)
@@ -503,21 +512,22 @@ func getMigrationsPath() (string, error) {
 		return "", errors.New("failed to determine test file location")
 	}
 
-	// Navigate from test file to project root
-	// Current location: internal/features/users/transport/http/test_context.go
-	// Navigate up 5 levels to reach project root
-	testDir := filepath.Dir(filename)
-	migrationsPath := filepath.Join(testDir, "..", "..", "..", "..", "..", "migrations")
+	dir := filepath.Dir(filename)
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			migrationsPath := filepath.Join(dir, "migrations")
+			if _, err := os.Stat(migrationsPath); err != nil {
+				return "", fmt.Errorf("migrations directory not found at %s: %w", migrationsPath, err)
+			}
+			return migrationsPath, nil
+		}
 
-	// Clean the path to resolve .. components
-	migrationsPath = filepath.Clean(migrationsPath)
-
-	// Verify migrations directory exists
-	if _, err := os.Stat(migrationsPath); os.IsNotExist(err) {
-		return "", fmt.Errorf("migrations directory not found at %s", migrationsPath)
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", errors.New("project root (go.mod) not found")
+		}
+		dir = parent
 	}
-
-	return migrationsPath, nil
 }
 
 // applyMigrations applies all database migrations to the test database using goose.
@@ -589,22 +599,34 @@ func generateTestID() string {
 //   - POST /api/v1/auth/sign-up (public)
 //   - POST /api/v1/auth/sign-in (public)
 //   - POST /api/v1/auth/sign-out (protected)
+//   - GET  /api/v1/user/me (protected)
+//   - POST /api/v1/directory?path=$path (protected)
+//   - GET  /api/v1/directory?path=$path (protected)
 func (tc *TestContext) setupTestRouter() http.Handler {
 	r := chi.NewRouter()
 
 	// Register API v1 routes to match production structure
 	r.Route("/api/v1", func(r chi.Router) {
+		// Auth
 		r.Route("/auth", func(r chi.Router) {
 			// Public routes
-			r.Post("/sign-up", tc.httpHandler.SignUp)
-			r.Post("/sign-in", tc.httpHandler.SignIn)
+			r.Post("/sign-up", tc.userHTTPHandler.SignUp)
+			r.Post("/sign-in", tc.userHTTPHandler.SignIn)
 
 			// Protected route with auth middleware
-			r.With(tc.httpHandler.AuthMiddleware()).Post("/sign-out", tc.httpHandler.SignOut)
+			r.With(tc.userHTTPHandler.AuthMiddleware()).Post("/sign-out", tc.userHTTPHandler.SignOut)
 		})
 
+		// User
 		r.Route("/user", func(r chi.Router) {
-			r.With(tc.httpHandler.AuthMiddleware()).Get("/me", tc.httpHandler.Me)
+			r.With(tc.userHTTPHandler.AuthMiddleware()).Get("/me", tc.userHTTPHandler.Me)
+		})
+
+		// Resource
+		r.Group(func(r chi.Router) {
+			r.Use(tc.userHTTPHandler.AuthMiddleware())
+			r.Post("/directory", tc.resourceHTTPHandler.CreateEmptyFolder)
+			r.Get("/directory", tc.resourceHTTPHandler.GetFolderContent)
 		})
 	})
 

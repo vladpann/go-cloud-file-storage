@@ -28,6 +28,12 @@ type ResourcesService interface {
 		userID uuid.UUID,
 		rawPath string,
 	) (domain.Resource, error)
+
+	GetFolderContent(
+		ctx context.Context,
+		userID uuid.UUID,
+		rawPath string,
+	) ([]domain.Resource, error)
 }
 
 func NewResourcesHTTPHandler(

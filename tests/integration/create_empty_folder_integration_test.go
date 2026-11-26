@@ -263,7 +263,6 @@ func TestCreateEmptyFolder_Unauthorized(t *testing.T) {
 }
 
 // TestCreateEmptyFolder_ParentNotFound validates 404 Not Found when parent folder does not exist.
-// (Если проверка существования родительской папки у вас ещё не реализована — удалите или включите после реализации.)
 func TestCreateEmptyFolder_ParentNotFound(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

@@ -23,11 +23,17 @@ type ResourcesRepository interface {
 		userID uuid.UUID,
 	) error
 
-	CreateFolder(
+	CreateEmptyFolder(
 		ctx context.Context,
 		userID uuid.UUID,
 		dir domain.Resource,
 	) error
+
+	GetFolderContent(
+		ctx context.Context,
+		userID uuid.UUID,
+		dir string,
+	) ([]domain.Resource, error)
 }
 
 func New(

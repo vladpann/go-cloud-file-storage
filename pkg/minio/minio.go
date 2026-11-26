@@ -12,7 +12,10 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-var ErrAlreadyExists = errors.New("object already exists")
+var (
+	ErrAlreadyExists = errors.New("object already exists")
+	ErrNotFound      = errors.New("object not found")
+)
 
 // Client wraps minio.Client with additional functionality.
 type Client struct {
@@ -128,22 +131,69 @@ func (c *Client) FolderExists(ctx context.Context, folderKey string) (bool, erro
 		folderKey += "/"
 	}
 
-	listCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	opts := minio.ListObjectsOptions{
 		Prefix:    folderKey,
 		Recursive: true,
 		MaxKeys:   1,
 	}
 
-	obj, ok := <-c.ListObjects(listCtx, c.bucketName, opts)
+	obj, ok := <-c.ListObjects(ctx, c.bucketName, opts)
 	if !ok {
 		return false, nil
 	}
 	if obj.Err != nil {
-		return false, fmt.Errorf("failed to check folder %q: %w", folderKey, obj.Err)
+		return false, fmt.Errorf(
+			"failed to check folder %q: %w",
+			folderKey,
+			obj.Err,
+		)
 	}
 
 	return true, nil
+}
+
+// FolderContent returns direct children (files and subfolders) under folderKey.
+// Returns ErrNotFound if neither the folder marker nor any objects with this prefix exist.
+func (c *Client) FolderContent(ctx context.Context, folderKey string) ([]minio.ObjectInfo, error) {
+	if !strings.HasSuffix(folderKey, "/") {
+		folderKey += "/"
+	}
+
+	opts := minio.ListObjectsOptions{
+		Prefix:    folderKey,
+		Recursive: false,
+	}
+
+	objects := make([]minio.ObjectInfo, 0)
+	seen := make(map[string]struct{})
+	found := false
+
+	for obj := range c.ListObjects(ctx, c.bucketName, opts) {
+		if obj.Err != nil {
+			return nil, fmt.Errorf(
+				"failed to list folder content %q: %w",
+				folderKey,
+				obj.Err,
+			)
+		}
+
+		found = true
+
+		if obj.Key == folderKey {
+			continue
+		}
+
+		if _, exists := seen[obj.Key]; exists {
+			continue
+		}
+		seen[obj.Key] = struct{}{}
+
+		objects = append(objects, obj)
+	}
+
+	if !found {
+		return nil, fmt.Errorf("%w: %s", ErrNotFound, folderKey)
+	}
+
+	return objects, nil
 }
